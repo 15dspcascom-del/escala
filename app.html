@@ -345,6 +345,20 @@
       <label>Viatura padrão (opcional - usada como sugestão ao gerar escala, se for delegado)</label>
       <input type="text" id="f-viatura" placeholder="Ex: VTR 1ªDD">
     </div>
+    <div class="field">
+      <label>Delegacia de origem (opcional - o motor tenta escalar junto quem é da mesma)</label>
+      <select id="f-delegacia">
+        <option value="">— nenhuma —</option>
+        <option value="DHE">DHE</option>
+        <option value="DRF">DRF</option>
+        <option value="DEAM">DEAM</option>
+        <option value="Santa Luzia">Santa Luzia</option>
+        <option value="Malta">Malta</option>
+        <option value="São Mamede">São Mamede</option>
+        <option value="1ª DD">1ª DD</option>
+        <option value="2ª DD">2ª DD</option>
+      </select>
+    </div>
     <div class="checkbox-row"><input type="checkbox" id="f-dirige"><label for="f-dirige">Sabe dirigir</label></div>
     <div class="checkbox-row"><input type="checkbox" id="f-novato"><label for="f-novato">Novato</label></div>
     <div class="checkbox-row"><input type="checkbox" id="f-ordinario"><label for="f-ordinario">Disponível para Ordinário 24/72 (Patos)</label></div>
@@ -556,6 +570,7 @@ function abrirModalNovo(){
   document.getElementById('modal-title').textContent = 'Novo Servidor';
   document.getElementById('f-nome').value = '';
   document.getElementById('f-viatura').value = '';
+  document.getElementById('f-delegacia').value = '';
   document.getElementById('f-cargo').value = 'investigador';
   document.getElementById('f-sexo').value = 'M';
   document.getElementById('f-dirige').checked = false;
@@ -579,6 +594,7 @@ async function abrirModalEdicao(id){
   document.getElementById('modal-title').textContent = 'Editar Servidor';
   document.getElementById('f-nome').value = s.nome;
   document.getElementById('f-viatura').value = s.viatura_padrao || '';
+  document.getElementById('f-delegacia').value = s.delegacia || '';
   document.getElementById('f-cargo').value = s.cargo;
   document.getElementById('f-sexo').value = s.sexo;
   document.getElementById('f-dirige').checked = s.dirige;
@@ -694,6 +710,7 @@ document.getElementById('btn-salvar-servidor').addEventListener('click', async (
   const payload = {
     nome,
     viatura_padrao: document.getElementById('f-viatura').value.trim() || null,
+    delegacia: document.getElementById('f-delegacia').value.trim() || null,
     cargo: document.getElementById('f-cargo').value,
     sexo: document.getElementById('f-sexo').value,
     dirige: document.getElementById('f-dirige').checked,
@@ -980,8 +997,13 @@ async function gerarEscala(mes, ano){
     return assignedToday.some(o => incompatSet.has(pairKey(s.id, o.id)));
   }
 
-  function escolher(candidatos, assignedToday){
+  function escolher(candidatos, assignedToday, preferirAgrupamento){
     const ordenados = [...candidatos].sort((a, b) => {
+      if (preferirAgrupamento){
+        const scoreA = assignedToday.some(o => o.delegacia && o.delegacia === a.delegacia) ? 0 : 1;
+        const scoreB = assignedToday.some(o => o.delegacia && o.delegacia === b.delegacia) ? 0 : 1;
+        if (scoreA !== scoreB) return scoreA - scoreB;
+      }
       const la = lastShift[a.id] || '0000-00-00';
       const lb = lastShift[b.id] || '0000-00-00';
       return la < lb ? -1 : la > lb ? 1 : 0;
@@ -1025,7 +1047,7 @@ async function gerarEscala(mes, ano){
     const escrivaes = [];
     for (let i = 0; i < totalEscrivoes; i++){
       const cand = servidores.filter(s => s.cargo === 'escrivao' && !s.disponivel_secust && disponivel(s, dataISO, poloPatos) && !assignedToday.includes(s));
-      const escolhido = escolher(cand, assignedToday);
+      const escolhido = escolher(cand, assignedToday, true);
       if (escolhido){ escrivaes.push(escolhido); assignedToday.push(escolhido); lastShift[escolhido.id] = dataISO; }
       else dia_avisos.push('Faltou escrivão (Extra Patos) - vaga ' + (i+1));
     }
@@ -1035,7 +1057,7 @@ async function gerarEscala(mes, ano){
     const vagasRestantes = totalInvestigadores - investigadores.length;
     for (let i = 0; i < vagasRestantes; i++){
       const cand = servidores.filter(s => s.cargo === 'investigador' && !s.disponivel_secust && disponivel(s, dataISO, poloPatos) && !assignedToday.includes(s));
-      const escolhido = escolher(cand, assignedToday);
+      const escolhido = escolher(cand, assignedToday, true);
       if (escolhido){ investigadores.push(escolhido); assignedToday.push(escolhido); lastShift[escolhido.id] = dataISO; }
       else dia_avisos.push('Faltou investigador (Extra Patos) - vaga ' + (i+1));
     }
@@ -1054,14 +1076,14 @@ async function gerarEscala(mes, ano){
       else dia_avisos.push('Teixeira: delegado sem servidor disponível');
 
       const escCand = servidores.filter(s => s.cargo === 'escrivao' && !s.disponivel_secust && disponivel(s, dataISO, poloTeix) && !assignedToday.includes(s));
-      const escrivaoTeixeira = escolher(escCand, assignedToday);
+      const escrivaoTeixeira = escolher(escCand, assignedToday, true);
       if (escrivaoTeixeira){ assignedToday.push(escrivaoTeixeira); lastShift[escrivaoTeixeira.id] = dataISO; }
       else dia_avisos.push('Teixeira: escrivão sem servidor disponível');
 
       const investTeixeira = [];
       for (let i = 0; i < 2; i++){
         const cand = servidores.filter(s => s.cargo === 'investigador' && !s.disponivel_secust && disponivel(s, dataISO, poloTeix) && !assignedToday.includes(s));
-        const escolhido = escolher(cand, assignedToday);
+        const escolhido = escolher(cand, assignedToday, true);
         if (escolhido){ investTeixeira.push(escolhido); assignedToday.push(escolhido); lastShift[escolhido.id] = dataISO; }
         else dia_avisos.push('Teixeira: faltou investigador - vaga ' + (i+1));
       }
