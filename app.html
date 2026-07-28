@@ -7,6 +7,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <style>
   :root{
     --bg:#f4f6f9;
@@ -162,6 +164,7 @@
     <div class="logo">Escalas</div>
     <div class="logo-sub">15ª DSPC · Patos/PB</div>
     <div class="nav-item active" data-tab="servidores"><i>&#9776;</i> Servidores</div>
+    <div class="nav-item" data-tab="feriados"><i>&#127881;</i> Feriados</div>
     <div class="nav-item" data-tab="gerar-escala"><i>&#128197;</i> Gerar Escala</div>
     <div class="nav-item" data-tab="escalas-geradas"><i>&#128196;</i> Escalas Geradas</div>
   </aside>
@@ -207,6 +210,45 @@
     </div>
     </div>
 
+    <div id="tab-content-feriados" class="tab-content hidden">
+      <div class="panel" style="margin-bottom:1.2rem;">
+        <div style="display:flex; align-items:flex-end; gap:1rem; flex-wrap:wrap;">
+          <div class="field" style="margin:0; min-width:110px;">
+            <label>Ano</label>
+            <input type="number" id="fer-ano" min="2025" max="2030">
+          </div>
+          <button class="btn-ghost" id="btn-carregar-feriados-ano" style="width:auto;">Carregar feriados do ano</button>
+        </div>
+      </div>
+
+      <div class="panel" style="margin-bottom:1.2rem;">
+        <h3 style="margin-top:0; font-size:1rem;">Novo feriado / evento com plantão extraordinário</h3>
+        <div class="grid-2">
+          <div class="field"><label>Data</label><input type="date" id="fer-data"></div>
+          <div class="field"><label>Nome</label><input type="text" id="fer-nome" placeholder="Ex: Nossa Senhora das Neves"></div>
+        </div>
+        <div style="display:flex; align-items:center; gap:1rem; margin-top:.5rem; flex-wrap:wrap;">
+          <select id="fer-tipo" style="width:auto;">
+            <option value="estadual">Estadual</option>
+            <option value="municipal">Municipal</option>
+            <option value="nacional">Nacional</option>
+          </select>
+          <div class="checkbox-row" style="margin:0;">
+            <input type="checkbox" id="fer-teixeira"><label for="fer-teixeira">Tem plantão em Teixeira</label>
+          </div>
+          <button class="btn-gold" id="btn-add-feriado-tab" style="width:auto;">+ Adicionar</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <table>
+          <thead><tr><th>Data</th><th>Nome</th><th>Tipo</th><th>Teixeira</th><th></th></tr></thead>
+          <tbody id="fer-tbody"></tbody>
+        </table>
+        <div id="fer-empty" class="empty-state hidden">Nenhum feriado cadastrado para esse ano ainda.</div>
+      </div>
+    </div>
+
     <div id="tab-content-gerar-escala" class="tab-content hidden">
       <div class="panel" style="margin-bottom:1.2rem;">
         <div style="display:flex; align-items:flex-end; gap:1rem; flex-wrap:wrap;">
@@ -225,6 +267,7 @@
           </div>
           <button class="btn-ghost" id="btn-ver-feriados" style="width:auto;">Ver feriados do mês</button>
           <button class="btn-gold" id="btn-gerar-escala" style="width:auto;">Gerar Escala</button>
+          <button class="btn-ghost hidden" id="btn-exportar-pdf" style="width:auto;">Exportar PDF</button>
         </div>
       </div>
 
@@ -260,7 +303,12 @@
         </table>
         <div id="eg-historico-empty" class="empty-state hidden">Nenhuma escala gerada ainda.</div>
       </div>
-      <div class="panel hidden" id="eg-detalhe-panel" style="margin-top:1.2rem;"></div>
+      <div class="panel hidden" id="eg-detalhe-panel" style="margin-top:1.2rem;">
+        <div style="display:flex; justify-content:flex-end; margin-bottom:.8rem;">
+          <button class="btn-ghost" id="btn-exportar-pdf-historico" style="width:auto;">Exportar PDF</button>
+        </div>
+        <div id="eg-detalhe-conteudo"></div>
+      </div>
     </div>
   </main>
 </div>
@@ -293,6 +341,10 @@
     </div>
 
     <div class="section-title">Atributos</div>
+    <div class="field">
+      <label>Viatura padrão (opcional - usada como sugestão ao gerar escala, se for delegado)</label>
+      <input type="text" id="f-viatura" placeholder="Ex: VTR 1ªDD">
+    </div>
     <div class="checkbox-row"><input type="checkbox" id="f-dirige"><label for="f-dirige">Sabe dirigir</label></div>
     <div class="checkbox-row"><input type="checkbox" id="f-novato"><label for="f-novato">Novato</label></div>
     <div class="checkbox-row"><input type="checkbox" id="f-ordinario"><label for="f-ordinario">Disponível para Ordinário 24/72 (Patos)</label></div>
@@ -345,6 +397,8 @@ let currentUser = null;
 let servidoresCache = [];
 let editandoServidorId = null;
 let feriasTemp = []; // usado ao criar servidor novo (antes de ter id)
+let ultimoResultadoEscala = null; // { escala, mes, ano } - último gerado nesta sessão
+let ultimoItemHistorico = null; // item selecionado na aba Escalas Geradas
 
 // ===================== AUTENTICAÇÃO =====================
 async function checkSession(){
@@ -501,6 +555,7 @@ function abrirModalNovo(){
   feriasTemp = [];
   document.getElementById('modal-title').textContent = 'Novo Servidor';
   document.getElementById('f-nome').value = '';
+  document.getElementById('f-viatura').value = '';
   document.getElementById('f-cargo').value = 'investigador';
   document.getElementById('f-sexo').value = 'M';
   document.getElementById('f-dirige').checked = false;
@@ -523,6 +578,7 @@ async function abrirModalEdicao(id){
   editandoServidorId = id;
   document.getElementById('modal-title').textContent = 'Editar Servidor';
   document.getElementById('f-nome').value = s.nome;
+  document.getElementById('f-viatura').value = s.viatura_padrao || '';
   document.getElementById('f-cargo').value = s.cargo;
   document.getElementById('f-sexo').value = s.sexo;
   document.getElementById('f-dirige').checked = s.dirige;
@@ -637,6 +693,7 @@ document.getElementById('btn-salvar-servidor').addEventListener('click', async (
 
   const payload = {
     nome,
+    viatura_padrao: document.getElementById('f-viatura').value.trim() || null,
     cargo: document.getElementById('f-cargo').value,
     sexo: document.getElementById('f-sexo').value,
     dirige: document.getElementById('f-dirige').checked,
@@ -692,6 +749,7 @@ async function excluirServidor(id){
 // ===================== NAVEGAÇÃO POR ABAS =====================
 const TITULOS_ABA = {
   'servidores': 'Cadastro de Servidores',
+  'feriados': 'Feriados e Eventos com Plantão',
   'gerar-escala': 'Gerar Escala Mensal',
   'escalas-geradas': 'Escalas Geradas'
 };
@@ -705,8 +763,20 @@ document.querySelectorAll('.nav-item[data-tab]').forEach(item => {
     document.getElementById('tab-content-' + tab).classList.remove('hidden');
     document.getElementById('topbar-title').textContent = TITULOS_ABA[tab];
     if (tab === 'escalas-geradas') carregarHistoricoEscalas();
+    if (tab === 'feriados') carregarFeriadosDoAno();
   });
 });
+
+// ===================== MÊS/ANO PADRÃO (mês seguinte ao atual) =====================
+(function preselecionarMesSeguinte(){
+  const hoje = new Date();
+  let mesSeguinte = hoje.getMonth() + 2; // getMonth() é 0-indexado; +1 é o mês atual, +2 é o seguinte
+  let anoSeguinte = hoje.getFullYear();
+  if (mesSeguinte > 12){ mesSeguinte = 1; anoSeguinte += 1; }
+  document.getElementById('ge-mes').value = String(mesSeguinte);
+  document.getElementById('ge-ano').value = String(anoSeguinte);
+  document.getElementById('fer-ano').value = String(anoSeguinte);
+})();
 
 // ===================== FERIADOS =====================
 function mesAnoSelecionados(){
@@ -794,6 +864,71 @@ document.getElementById('btn-add-feriado').addEventListener('click', async () =>
   const { mes, ano } = mesAnoSelecionados();
   const feriados = await garantirFeriadosDoMes(mes, ano);
   renderFeriadosLista(feriados);
+});
+
+// ===================== ABA FERIADOS (gestão completa) =====================
+async function carregarFeriadosDoAno(){
+  const ano = document.getElementById('fer-ano').value;
+  const { data, error } = await supa.from('feriados')
+    .select('*')
+    .gte('data', `${ano}-01-01`)
+    .lte('data', `${ano}-12-31`)
+    .order('data');
+  if (error){ mostrarToast('Erro ao carregar feriados: ' + error.message, true); return; }
+  renderFeriadosTab(data || []);
+}
+
+function renderFeriadosTab(lista){
+  const tbody = document.getElementById('fer-tbody');
+  const emptyEl = document.getElementById('fer-empty');
+  if (lista.length === 0){
+    tbody.innerHTML = '';
+    emptyEl.classList.remove('hidden');
+    return;
+  }
+  emptyEl.classList.add('hidden');
+  tbody.innerHTML = lista.map(f => `
+    <tr>
+      <td>${formatarData(f.data)}</td>
+      <td>${escapeHtml(f.nome)}</td>
+      <td><span class="tag">${f.tipo}</span></td>
+      <td><input type="checkbox" data-fer-teixeira="${f.id}" ${f.teixeira_plantao ? 'checked' : ''}></td>
+      <td><button class="btn-danger btn-sm" data-fer-del="${f.id}">Excluir</button></td>
+    </tr>
+  `).join('');
+  tbody.querySelectorAll('[data-fer-teixeira]').forEach(chk => {
+    chk.addEventListener('change', async () => {
+      await supa.from('feriados').update({ teixeira_plantao: chk.checked }).eq('id', chk.dataset.ferTeixeira);
+      mostrarToast('Feriado atualizado.');
+    });
+  });
+  tbody.querySelectorAll('[data-fer-del]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      if (!confirm('Excluir esse feriado?')) return;
+      await supa.from('feriados').delete().eq('id', btn.dataset.ferDel);
+      carregarFeriadosDoAno();
+    });
+  });
+}
+
+document.getElementById('btn-carregar-feriados-ano').addEventListener('click', carregarFeriadosDoAno);
+
+document.getElementById('btn-add-feriado-tab').addEventListener('click', async () => {
+  const data = document.getElementById('fer-data').value;
+  const nome = document.getElementById('fer-nome').value.trim();
+  const tipo = document.getElementById('fer-tipo').value;
+  const teixeira = document.getElementById('fer-teixeira').checked;
+  if (!data || !nome){
+    mostrarToast('Preencha data e nome do feriado.', true);
+    return;
+  }
+  const { error } = await supa.from('feriados').insert({ data, nome, tipo, teixeira_plantao: teixeira });
+  if (error){ mostrarToast('Erro ao adicionar: ' + error.message, true); return; }
+  mostrarToast('Feriado adicionado.');
+  document.getElementById('fer-data').value = '';
+  document.getElementById('fer-nome').value = '';
+  document.getElementById('fer-teixeira').checked = false;
+  carregarFeriadosDoAno();
 });
 
 // ===================== MOTOR DE GERAÇÃO DE ESCALA =====================
@@ -935,7 +1070,9 @@ async function gerarEscala(mes, ano){
 
     escala.push({
       data: dataISO, diaSemana, feriado: feriadoHoje ? feriadoHoje.nome : null,
-      delegadoPatos, ordinario, secust, escrivaes, investigadores, teixeira
+      delegadoPatos, ordinario, secust, escrivaes, investigadores, teixeira,
+      viaturaPatos: delegadoPatos ? (delegadoPatos.viatura_padrao || '') : '',
+      viaturaTeixeira: (teixeira && teixeira.delegado) ? (teixeira.delegado.viatura_padrao || '') : ''
     });
 
     if (dia_avisos.length > 0) avisos.push({ data: dataISO, itens: dia_avisos });
@@ -944,40 +1081,123 @@ async function gerarEscala(mes, ano){
   return { escala, avisos };
 }
 
-function nomeOuTraco(s){ return s ? escapeHtml(s.nome) : '<span style="color:var(--danger);">— vazio —</span>'; }
+function opcoesServidor(cargo, selecionadoId){
+  const opcoes = servidoresCache.filter(s => s.cargo === cargo && s.ativo)
+    .map(s => `<option value="${s.id}" ${s.id === selecionadoId ? 'selected' : ''}>${escapeHtml(s.nome)}</option>`).join('');
+  return `<option value="">— vazio —</option>${opcoes}`;
+}
+
+function selectEditavel(dataISO, campo, idx, cargo, servidorAtual){
+  return `<select data-dia="${dataISO}" data-campo="${campo}" data-idx="${idx}" style="font-size:.78rem; padding:.25rem; margin:1px 0; width:100%;">
+    ${opcoesServidor(cargo, servidorAtual ? servidorAtual.id : '')}
+  </select>`;
+}
+
+function inputViatura(dataISO, campo, valorAtual){
+  return `<input type="text" data-dia="${dataISO}" data-campo="${campo}" value="${escapeHtml(valorAtual || '')}" placeholder="Viatura" style="font-size:.75rem; padding:.25rem; margin-top:3px; width:100%;">`;
+}
+
+function linhaEditavel(d){
+  const isWeekend = d.diaSemana === 'SAB' || d.diaSemana === 'DOM';
+  const totalEscrivoes = isWeekend ? 2 : 1;
+  const totalInvestigadores = isWeekend ? 2 : 3;
+  const escrivaes = [...(d.escrivaes || [])];
+  const investigadores = [...(d.investigadores || [])];
+  while (escrivaes.length < totalEscrivoes) escrivaes.push(null);
+  while (investigadores.length < totalInvestigadores) investigadores.push(null);
+
+  const temTeixeira = isWeekend || !!d.feriado;
+  const teixeiraInvest = d.teixeira ? [...(d.teixeira.investigadores || [])] : [];
+  while (temTeixeira && teixeiraInvest.length < 2) teixeiraInvest.push(null);
+
+  return `
+    <tr>
+      <td><strong>${d.data.split('-')[2]}</strong> ${d.diaSemana}${d.feriado ? ' <span class="tag on">' + escapeHtml(d.feriado) + '</span>' : ''}</td>
+      <td>
+        ${selectEditavel(d.data, 'delegadoPatos', 0, 'delegado', d.delegadoPatos)}
+        ${inputViatura(d.data, 'viaturaPatos', d.viaturaPatos)}
+      </td>
+      <td>${selectEditavel(d.data, 'ordinario', 0, 'investigador', d.ordinario)}</td>
+      <td>${selectEditavel(d.data, 'secust', 0, 'investigador', d.secust)}</td>
+      <td>${escrivaes.map((s, i) => selectEditavel(d.data, 'escrivaes', i, 'escrivao', s)).join('')}</td>
+      <td>${investigadores.map((s, i) => selectEditavel(d.data, 'investigadores', i, 'investigador', s)).join('')}</td>
+      <td>${temTeixeira ? `
+        ${selectEditavel(d.data, 'teixeiraDelegado', 0, 'delegado', d.teixeira ? d.teixeira.delegado : null)}
+        ${inputViatura(d.data, 'viaturaTeixeira', d.viaturaTeixeira)}
+        ${selectEditavel(d.data, 'teixeiraEscrivao', 0, 'escrivao', d.teixeira ? d.teixeira.escrivao : null)}
+        ${teixeiraInvest.map((s, i) => selectEditavel(d.data, 'teixeiraInvestigadores', i, 'investigador', s)).join('')}
+      ` : '-'}</td>
+    </tr>
+  `;
+}
+
+function lerEscalaEditadaDoDOM(escalaOriginal, containerId){
+  const container = document.getElementById(containerId);
+  return escalaOriginal.map(d => {
+    const porId = id => id ? (servidoresCache.find(s => s.id === id) || null) : null;
+    const getSel = (campo, idx) => {
+      const el = container.querySelector(`[data-dia="${d.data}"][data-campo="${campo}"][data-idx="${idx || 0}"]`);
+      return el ? porId(el.value) : null;
+    };
+    const getInput = campo => {
+      const el = container.querySelector(`input[data-dia="${d.data}"][data-campo="${campo}"]`);
+      return el ? el.value : '';
+    };
+    const isWeekend = d.diaSemana === 'SAB' || d.diaSemana === 'DOM';
+    const totalEscrivoes = isWeekend ? 2 : 1;
+    const totalInvestigadores = isWeekend ? 2 : 3;
+    const escrivaes = [];
+    for (let i = 0; i < totalEscrivoes; i++){ const s = getSel('escrivaes', i); if (s) escrivaes.push(s); }
+    const investigadores = [];
+    for (let i = 0; i < totalInvestigadores; i++){ const s = getSel('investigadores', i); if (s) investigadores.push(s); }
+
+    const temTeixeira = isWeekend || !!d.feriado;
+    let teixeira = null;
+    if (temTeixeira){
+      const tInvest = [];
+      for (let i = 0; i < 2; i++){ const s = getSel('teixeiraInvestigadores', i); if (s) tInvest.push(s); }
+      teixeira = { delegado: getSel('teixeiraDelegado', 0), escrivao: getSel('teixeiraEscrivao', 0), investigadores: tInvest };
+    }
+
+    return {
+      ...d,
+      delegadoPatos: getSel('delegadoPatos', 0),
+      ordinario: getSel('ordinario', 0),
+      secust: getSel('secust', 0),
+      escrivaes, investigadores, teixeira,
+      viaturaPatos: getInput('viaturaPatos'),
+      viaturaTeixeira: getInput('viaturaTeixeira')
+    };
+  });
+}
 
 function renderResultadoEscala(escala, avisos, mes, ano){
-  const painelAvisos = document.getElementById('ge-avisos-panel');
-  if (avisos.length > 0){
-    painelAvisos.classList.remove('hidden');
-    painelAvisos.innerHTML = '<h3 style="margin-top:0; color:var(--danger); font-size:1rem;">Avisos (' + avisos.length + ' dia(s) com pendência)</h3>' +
-      avisos.map(a => `<p style="font-size:.82rem; margin:.3rem 0;"><strong>${formatarData(a.data)}:</strong> ${a.itens.join(' · ')}</p>`).join('');
-  } else {
-    painelAvisos.classList.add('hidden');
-  }
+  renderAvisosEm(document.getElementById('ge-avisos-panel'), avisos);
 
   const painel = document.getElementById('ge-resultado-panel');
   painel.innerHTML = `
-    <table>
+    <div style="display:flex; justify-content:flex-end; margin-bottom:.8rem;">
+      <button class="btn-primary" id="btn-salvar-edicao-escala" style="width:auto;">Salvar Alterações</button>
+    </div>
+    <table id="tabela-escala-editavel">
       <thead><tr>
         <th>Dia</th><th>Delegado Patos</th><th>Ordinário</th><th>SECUST</th>
         <th>Escrivães</th><th>Investigadores</th><th>Teixeira</th>
       </tr></thead>
-      <tbody>
-        ${escala.map(d => `
-          <tr>
-            <td><strong>${d.data.split('-')[2]}</strong> ${d.diaSemana}${d.feriado ? ' <span class="tag on">' + escapeHtml(d.feriado) + '</span>' : ''}</td>
-            <td>${nomeOuTraco(d.delegadoPatos)}</td>
-            <td>${nomeOuTraco(d.ordinario)}</td>
-            <td>${nomeOuTraco(d.secust)}</td>
-            <td>${d.escrivaes.map(s => escapeHtml(s.nome)).join(', ') || '<span style="color:var(--danger);">—</span>'}</td>
-            <td>${d.investigadores.map(s => escapeHtml(s.nome)).join(', ') || '<span style="color:var(--danger);">—</span>'}</td>
-            <td>${d.teixeira ? [d.teixeira.delegado, d.teixeira.escrivao, ...d.teixeira.investigadores].filter(Boolean).map(s=>escapeHtml(s.nome)).join(', ') : '-'}</td>
-          </tr>
-        `).join('')}
-      </tbody>
+      <tbody>${escala.map(linhaEditavel).join('')}</tbody>
     </table>
   `;
+
+  document.getElementById('btn-salvar-edicao-escala').addEventListener('click', async () => {
+    const editada = lerEscalaEditadaDoDOM(escala, 'tabela-escala-editavel');
+    const novosAvisos = await revalidarEscala(editada);
+    ultimoResultadoEscala.escala = editada;
+    if (ultimoResultadoEscala.id){
+      await supa.from('escalas_geradas').update({ dados: editada, avisos: novosAvisos }).eq('id', ultimoResultadoEscala.id);
+    }
+    renderAvisosEm(document.getElementById('ge-avisos-panel'), novosAvisos);
+    mostrarToast('Alterações salvas.' + (novosAvisos.length ? ' Ainda há ' + novosAvisos.length + ' dia(s) com aviso.' : ' Nenhum aviso pendente.'), novosAvisos.length > 0);
+  });
 }
 
 document.getElementById('btn-gerar-escala').addEventListener('click', async () => {
@@ -988,12 +1208,15 @@ document.getElementById('btn-gerar-escala').addEventListener('click', async () =
   try {
     const { escala, avisos } = await gerarEscala(mes, ano);
     renderResultadoEscala(escala, avisos, mes, ano);
-    await supa.from('escalas_geradas').insert({
+    ultimoResultadoEscala = { escala, mes, ano };
+    document.getElementById('btn-exportar-pdf').classList.remove('hidden');
+    const { data: inserido } = await supa.from('escalas_geradas').insert({
       mes, ano,
       dados: escala,
       avisos,
       gerado_por: currentUser.id
-    });
+    }).select();
+    ultimoResultadoEscala.id = inserido[0].id;
     mostrarToast('Escala gerada e salva no histórico.' + (avisos.length ? ' Há ' + avisos.length + ' dia(s) com aviso.' : ''), avisos.length > 0);
   } catch(e){
     mostrarToast('Erro ao gerar escala: ' + e.message, true);
@@ -1027,36 +1250,180 @@ async function carregarHistoricoEscalas(){
   tbody.querySelectorAll('[data-ver-escala]').forEach(btn => {
     btn.addEventListener('click', () => {
       const item = data.find(x => x.id === btn.dataset.verEscala);
+      ultimoItemHistorico = item;
       const painel = document.getElementById('eg-detalhe-panel');
       painel.classList.remove('hidden');
       const avisosHtml = (item.avisos && item.avisos.length > 0)
         ? '<div style="border:1px solid var(--danger); border-radius:8px; padding:.8rem; margin-bottom:1rem;"><strong style="color:var(--danger);">Avisos:</strong>' +
           item.avisos.map(a => `<p style="font-size:.82rem; margin:.3rem 0;">${formatarData(a.data)}: ${a.itens.join(' · ')}</p>`).join('') + '</div>'
         : '';
-      painel.innerHTML = avisosHtml + `
-        <table>
+      document.getElementById('eg-detalhe-conteudo').innerHTML = avisosHtml + `
+        <table id="tabela-escala-historico">
           <thead><tr>
             <th>Dia</th><th>Delegado Patos</th><th>Ordinário</th><th>SECUST</th>
             <th>Escrivães</th><th>Investigadores</th><th>Teixeira</th>
           </tr></thead>
-          <tbody>
-            ${item.dados.map(d => `
-              <tr>
-                <td><strong>${d.data.split('-')[2]}</strong> ${d.diaSemana}${d.feriado ? ' <span class="tag on">' + escapeHtml(d.feriado) + '</span>' : ''}</td>
-                <td>${nomeOuTraco(d.delegadoPatos)}</td>
-                <td>${nomeOuTraco(d.ordinario)}</td>
-                <td>${nomeOuTraco(d.secust)}</td>
-                <td>${(d.escrivaes||[]).map(s => escapeHtml(s.nome)).join(', ') || '-'}</td>
-                <td>${(d.investigadores||[]).map(s => escapeHtml(s.nome)).join(', ') || '-'}</td>
-                <td>${d.teixeira ? [d.teixeira.delegado, d.teixeira.escrivao, ...(d.teixeira.investigadores||[])].filter(Boolean).map(s=>escapeHtml(s.nome)).join(', ') : '-'}</td>
-              </tr>
-            `).join('')}
-          </tbody>
+          <tbody>${item.dados.map(linhaEditavel).join('')}</tbody>
         </table>
+        <div style="display:flex; justify-content:flex-end; margin-top:.8rem;">
+          <button class="btn-primary" id="btn-salvar-edicao-historico" style="width:auto;">Salvar Alterações</button>
+        </div>
       `;
+      document.getElementById('btn-salvar-edicao-historico').addEventListener('click', async () => {
+        const editada = lerEscalaEditadaDoDOM(item.dados, 'tabela-escala-historico');
+        const novosAvisos = await revalidarEscala(editada);
+        await supa.from('escalas_geradas').update({ dados: editada, avisos: novosAvisos }).eq('id', item.id);
+        item.dados = editada;
+        item.avisos = novosAvisos;
+        mostrarToast('Alterações salvas.' + (novosAvisos.length ? ' Ainda há ' + novosAvisos.length + ' dia(s) com aviso.' : ' Nenhum aviso pendente.'), novosAvisos.length > 0);
+        btn.click(); // reabre a visualização já atualizada com os novos avisos
+      });
     });
   });
 }
+
+// ===================== REVALIDAÇÃO APÓS EDIÇÃO MANUAL =====================
+async function revalidarEscala(escala){
+  const { data: ferias } = await supa.from('ferias').select('*');
+  const { data: incompats } = await supa.from('incompatibilidades').select('*');
+  const incompatSet = new Set((incompats || []).map(i => pairKey(i.servidor_id_1, i.servidor_id_2)));
+  const lastShift = {};
+  const avisos = [];
+
+  escala.forEach(d => {
+    const dia_avisos = [];
+    const isWeekend = d.diaSemana === 'SAB' || d.diaSemana === 'DOM';
+    const totalEscrivoes = isWeekend ? 2 : 1;
+    const totalInvestigadores = isWeekend ? 2 : 3;
+    const assignedToday = [];
+
+    function checar(s, label){
+      if (!s) return;
+      assignedToday.push(s);
+      if (isOnFerias(s.id, d.data, ferias || [])) dia_avisos.push(`${label}: ${s.nome} está de férias`);
+      if (lastShift[s.id] && diffDias(d.data, lastShift[s.id]) < 4) dia_avisos.push(`${label}: ${s.nome} sem 72h de descanso desde o último plantão`);
+      lastShift[s.id] = d.data;
+    }
+
+    checar(d.delegadoPatos, 'Delegado Patos');
+    if (!d.delegadoPatos) dia_avisos.push('Delegado (Patos) sem servidor');
+    checar(d.ordinario, 'Ordinário');
+    if (!d.ordinario) dia_avisos.push('Ordinário 24/72 sem servidor');
+    checar(d.secust, 'SECUST');
+    if (!d.secust) dia_avisos.push('SECUST sem servidor');
+    (d.escrivaes || []).forEach(s => checar(s, 'Escrivão Extra'));
+    if ((d.escrivaes || []).length < totalEscrivoes) dia_avisos.push('Faltam escrivães no Extra Patos');
+    (d.investigadores || []).forEach(s => checar(s, 'Investigador Extra'));
+    if ((d.investigadores || []).length < totalInvestigadores) dia_avisos.push('Faltam investigadores no Extra Patos');
+    if (!(d.investigadores || []).some(s => s.dirige)) dia_avisos.push('Nenhum investigador do dia sabe dirigir');
+    if (!(d.investigadores || []).some(s => s.sexo === 'M')) dia_avisos.push('Nenhum investigador homem no dia');
+    if (!(d.investigadores || []).some(s => s.novato)) dia_avisos.push('Nenhum investigador novato no dia');
+
+    const temTeixeira = isWeekend || !!d.feriado;
+    if (temTeixeira){
+      if (d.teixeira){
+        checar(d.teixeira.delegado, 'Teixeira Delegado');
+        if (!d.teixeira.delegado) dia_avisos.push('Teixeira: delegado sem servidor');
+        checar(d.teixeira.escrivao, 'Teixeira Escrivão');
+        if (!d.teixeira.escrivao) dia_avisos.push('Teixeira: escrivão sem servidor');
+        (d.teixeira.investigadores || []).forEach(s => checar(s, 'Teixeira Investigador'));
+        if ((d.teixeira.investigadores || []).length < 2) dia_avisos.push('Teixeira: faltam investigadores');
+      } else {
+        dia_avisos.push('Teixeira: nenhum servidor escalado nesse dia com plantão previsto');
+      }
+    }
+
+    for (let i = 0; i < assignedToday.length; i++){
+      for (let j = i + 1; j < assignedToday.length; j++){
+        if (incompatSet.has(pairKey(assignedToday[i].id, assignedToday[j].id))){
+          dia_avisos.push(`Incompatibilidade: ${assignedToday[i].nome} e ${assignedToday[j].nome} no mesmo dia`);
+        }
+      }
+    }
+
+    if (dia_avisos.length > 0) avisos.push({ data: d.data, itens: dia_avisos });
+  });
+
+  return avisos;
+}
+
+function renderAvisosEm(painelEl, avisos){
+  if (avisos.length > 0){
+    painelEl.classList.remove('hidden');
+    painelEl.innerHTML = '<h3 style="margin-top:0; color:var(--danger); font-size:1rem;">Avisos (' + avisos.length + ' dia(s) com pendência)</h3>' +
+      avisos.map(a => `<p style="font-size:.82rem; margin:.3rem 0;"><strong>${formatarData(a.data)}:</strong> ${a.itens.join(' · ')}</p>`).join('') +
+      '<p style="font-size:.75rem; color:var(--text-muted); margin-top:.6rem;">Você pode corrigir manualmente na tabela abaixo e clicar em "Salvar Alterações".</p>';
+  } else {
+    painelEl.classList.add('hidden');
+    painelEl.innerHTML = '';
+  }
+}
+
+// ===================== EXPORTAÇÃO PDF (formato baseado no modelo enviado) =====================
+// Observação: o modelo original também trazia a viatura (VTR) de cada delegado.
+// Nosso cadastro de servidores não guarda viatura, então essa coluna não aparece aqui.
+function exportarPDF(escala, mes, ano){
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(13);
+  doc.text(`ESCALAS – ${MESES_NOME[mes].toUpperCase()}/${ano}`, 40, 28);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  doc.text(`Gerado em ${new Date().toLocaleString('pt-BR')} · 15ª DSPC - Patos/PB`, 40, 40);
+
+  const head = [
+    [
+      { content: '', styles: { fillColor: [255,255,255] } },
+      { content: 'PATOS', colSpan: 4, styles: { halign: 'center', fillColor: [250, 220, 120] } },
+      { content: 'TEIXEIRA (Extraord.)', colSpan: 2, styles: { halign: 'center', fillColor: [250, 220, 120] } }
+    ],
+    ['Dia', 'Delegado', 'Ordinário 24/72', "Extra EPC's/IPC's", 'SECUST', 'Delegado', "EPC's/IPC's"]
+  ];
+
+  const body = escala.map(d => ([
+    d.data.split('-')[2] + ' ' + d.diaSemana + (d.feriado ? ' *' : ''),
+    (d.delegadoPatos ? d.delegadoPatos.nome : '—') + (d.viaturaPatos ? '\n' + d.viaturaPatos : ''),
+    d.ordinario ? d.ordinario.nome : '—',
+    [...d.escrivaes, ...d.investigadores].map(s => s.nome).join(', ') || '—',
+    d.secust ? d.secust.nome : '—',
+    (d.teixeira && d.teixeira.delegado) ? d.teixeira.delegado.nome + (d.viaturaTeixeira ? '\n' + d.viaturaTeixeira : '') : '',
+    d.teixeira ? [d.teixeira.escrivao, ...(d.teixeira.investigadores || [])].filter(Boolean).map(s => s.nome).join(', ') : ''
+  ]));
+
+  doc.autoTable({
+    head, body, startY: 50,
+    styles: { fontSize: 7, cellPadding: 3, lineColor: [30,30,30], lineWidth: 0.5 },
+    headStyles: { fillColor: [250, 220, 120], textColor: 20, fontStyle: 'bold' },
+    theme: 'grid',
+    didParseCell: function(data){
+      if (data.section === 'body'){
+        const dow = escala[data.row.index].diaSemana;
+        if (dow === 'SAB' || dow === 'DOM') data.cell.styles.fillColor = [255, 245, 225];
+      }
+    }
+  });
+
+  const feriadosDoMes = escala.filter(d => d.feriado);
+  if (feriadosDoMes.length > 0){
+    let y = doc.lastAutoTable.finalY + 15;
+    doc.setFontSize(7);
+    doc.text('* Feriados: ' + feriadosDoMes.map(d => d.data.split('-')[2] + ' - ' + d.feriado).join(' | '), 40, y);
+  }
+
+  doc.save(`Escala_${MESES_NOME[mes]}_${ano}.pdf`);
+}
+
+document.getElementById('btn-exportar-pdf').addEventListener('click', () => {
+  if (!ultimoResultadoEscala) return;
+  exportarPDF(ultimoResultadoEscala.escala, ultimoResultadoEscala.mes, ultimoResultadoEscala.ano);
+});
+
+document.getElementById('btn-exportar-pdf-historico').addEventListener('click', () => {
+  if (!ultimoItemHistorico) return;
+  exportarPDF(ultimoItemHistorico.dados, ultimoItemHistorico.mes, ultimoItemHistorico.ano);
+});
 
 // ===================== TOAST =====================
 function mostrarToast(msg, isError){
