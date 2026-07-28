@@ -162,18 +162,19 @@
     <div class="logo">Escalas</div>
     <div class="logo-sub">15ª DSPC · Patos/PB</div>
     <div class="nav-item active" data-tab="servidores"><i>&#9776;</i> Servidores</div>
-    <div class="nav-item disabled" title="Em breve"><i>&#128197;</i> Gerar Escala</div>
-    <div class="nav-item disabled" title="Em breve"><i>&#128196;</i> Escalas Geradas</div>
+    <div class="nav-item" data-tab="gerar-escala"><i>&#128197;</i> Gerar Escala</div>
+    <div class="nav-item" data-tab="escalas-geradas"><i>&#128196;</i> Escalas Geradas</div>
   </aside>
   <main>
     <div class="topbar">
-      <h1>Cadastro de Servidores</h1>
+      <h1 id="topbar-title">Cadastro de Servidores</h1>
       <div class="user-chip">
         <span id="user-email"></span>
         <button class="btn-ghost btn-sm" id="btn-logout">Sair</button>
       </div>
     </div>
 
+    <div id="tab-content-servidores" class="tab-content">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; gap:1rem;">
       <div style="display:flex; align-items:center; gap:.8rem;">
         <div style="color:var(--text-muted); font-size:.85rem;" id="servidores-count">Carregando...</div>
@@ -203,6 +204,63 @@
         <tbody id="servidores-tbody"></tbody>
       </table>
       <div id="servidores-empty" class="empty-state hidden">Nenhum servidor cadastrado ainda. Clique em "Novo Servidor" para começar.</div>
+    </div>
+    </div>
+
+    <div id="tab-content-gerar-escala" class="tab-content hidden">
+      <div class="panel" style="margin-bottom:1.2rem;">
+        <div style="display:flex; align-items:flex-end; gap:1rem; flex-wrap:wrap;">
+          <div class="field" style="margin:0; min-width:140px;">
+            <label>Mês</label>
+            <select id="ge-mes">
+              <option value="1">Janeiro</option><option value="2">Fevereiro</option><option value="3">Março</option>
+              <option value="4">Abril</option><option value="5">Maio</option><option value="6">Junho</option>
+              <option value="7">Julho</option><option value="8">Agosto</option><option value="9">Setembro</option>
+              <option value="10">Outubro</option><option value="11">Novembro</option><option value="12">Dezembro</option>
+            </select>
+          </div>
+          <div class="field" style="margin:0; min-width:110px;">
+            <label>Ano</label>
+            <input type="number" id="ge-ano" value="2026" min="2025" max="2030">
+          </div>
+          <button class="btn-ghost" id="btn-ver-feriados" style="width:auto;">Ver feriados do mês</button>
+          <button class="btn-gold" id="btn-gerar-escala" style="width:auto;">Gerar Escala</button>
+        </div>
+      </div>
+
+      <div class="panel hidden" id="ge-feriados-panel" style="margin-bottom:1.2rem;">
+        <h3 style="margin-top:0; font-size:1rem;">Feriados do mês</h3>
+        <div id="ge-feriados-lista"></div>
+        <div class="grid-2" style="margin-top:1rem;">
+          <input type="date" id="ge-feriado-data">
+          <input type="text" id="ge-feriado-nome" placeholder="Nome do feriado (ex: Nossa Senhora das Neves)">
+        </div>
+        <div style="display:flex; align-items:center; gap:.8rem; margin-top:.6rem;">
+          <select id="ge-feriado-tipo" style="width:auto;">
+            <option value="estadual">Estadual</option>
+            <option value="municipal">Municipal</option>
+          </select>
+          <div class="checkbox-row" style="margin:0;">
+            <input type="checkbox" id="ge-feriado-teixeira"><label for="ge-feriado-teixeira">Tem plantão em Teixeira</label>
+          </div>
+          <button class="btn-ghost btn-sm" id="btn-add-feriado" type="button">+ Adicionar feriado</button>
+        </div>
+      </div>
+
+      <div id="ge-avisos-panel" class="panel hidden" style="margin-bottom:1.2rem; border-color:var(--danger);"></div>
+
+      <div class="panel" id="ge-resultado-panel"></div>
+    </div>
+
+    <div id="tab-content-escalas-geradas" class="tab-content hidden">
+      <div class="panel">
+        <table>
+          <thead><tr><th>Mês/Ano</th><th>Gerado em</th><th></th></tr></thead>
+          <tbody id="eg-historico-tbody"></tbody>
+        </table>
+        <div id="eg-historico-empty" class="empty-state hidden">Nenhuma escala gerada ainda.</div>
+      </div>
+      <div class="panel hidden" id="eg-detalhe-panel" style="margin-top:1.2rem;"></div>
     </div>
   </main>
 </div>
@@ -629,6 +687,375 @@ async function excluirServidor(id){
   if (error){ mostrarToast('Erro ao excluir: ' + error.message, true); return; }
   mostrarToast('Servidor excluído.');
   carregarServidores();
+}
+
+// ===================== NAVEGAÇÃO POR ABAS =====================
+const TITULOS_ABA = {
+  'servidores': 'Cadastro de Servidores',
+  'gerar-escala': 'Gerar Escala Mensal',
+  'escalas-geradas': 'Escalas Geradas'
+};
+
+document.querySelectorAll('.nav-item[data-tab]').forEach(item => {
+  item.addEventListener('click', () => {
+    const tab = item.dataset.tab;
+    document.querySelectorAll('.nav-item[data-tab]').forEach(i => i.classList.remove('active'));
+    item.classList.add('active');
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
+    document.getElementById('tab-content-' + tab).classList.remove('hidden');
+    document.getElementById('topbar-title').textContent = TITULOS_ABA[tab];
+    if (tab === 'escalas-geradas') carregarHistoricoEscalas();
+  });
+});
+
+// ===================== FERIADOS =====================
+function mesAnoSelecionados(){
+  return {
+    mes: parseInt(document.getElementById('ge-mes').value, 10),
+    ano: parseInt(document.getElementById('ge-ano').value, 10)
+  };
+}
+
+async function buscarFeriadosNacionais(ano){
+  try{
+    const resp = await fetch(`https://brasilapi.com.br/api/feriados/v1/${ano}`);
+    if (!resp.ok) return [];
+    return await resp.json();
+  } catch(e){
+    return [];
+  }
+}
+
+async function garantirFeriadosDoMes(mes, ano){
+  const nacionais = await buscarFeriadosNacionais(ano);
+  const prefixo = `${ano}-${String(mes).padStart(2,'0')}`;
+  const doMes = nacionais.filter(f => f.date.startsWith(prefixo));
+  for (const f of doMes){
+    await supa.from('feriados').upsert(
+      { data: f.date, nome: f.name, tipo: 'nacional', teixeira_plantao: false },
+      { onConflict: 'data,nome', ignoreDuplicates: true }
+    );
+  }
+  const { data } = await supa.from('feriados')
+    .select('*')
+    .gte('data', `${prefixo}-01`)
+    .lte('data', `${prefixo}-31`)
+    .order('data');
+  return data || [];
+}
+
+document.getElementById('btn-ver-feriados').addEventListener('click', async () => {
+  const { mes, ano } = mesAnoSelecionados();
+  const painel = document.getElementById('ge-feriados-panel');
+  painel.classList.remove('hidden');
+  document.getElementById('ge-feriados-lista').innerHTML = '<p style="color:var(--text-muted); font-size:.85rem;">Carregando...</p>';
+  const feriados = await garantirFeriadosDoMes(mes, ano);
+  renderFeriadosLista(feriados);
+});
+
+function renderFeriadosLista(feriados){
+  const el = document.getElementById('ge-feriados-lista');
+  if (feriados.length === 0){
+    el.innerHTML = '<p style="color:var(--text-muted); font-size:.85rem;">Nenhum feriado encontrado para esse mês.</p>';
+    return;
+  }
+  el.innerHTML = feriados.map(f => `
+    <div class="checkbox-row" style="justify-content:space-between;">
+      <span>${formatarData(f.data)} — ${escapeHtml(f.nome)} <span class="tag">${f.tipo}</span></span>
+      <label style="display:flex; align-items:center; gap:.4rem; margin:0;">
+        <input type="checkbox" data-feriado-teixeira="${f.id}" ${f.teixeira_plantao ? 'checked' : ''}>
+        Plantão em Teixeira
+      </label>
+    </div>
+  `).join('');
+  el.querySelectorAll('[data-feriado-teixeira]').forEach(chk => {
+    chk.addEventListener('change', async () => {
+      await supa.from('feriados').update({ teixeira_plantao: chk.checked }).eq('id', chk.dataset.feriadoTeixeira);
+      mostrarToast('Feriado atualizado.');
+    });
+  });
+}
+
+document.getElementById('btn-add-feriado').addEventListener('click', async () => {
+  const data = document.getElementById('ge-feriado-data').value;
+  const nome = document.getElementById('ge-feriado-nome').value.trim();
+  const tipo = document.getElementById('ge-feriado-tipo').value;
+  const teixeira = document.getElementById('ge-feriado-teixeira').checked;
+  if (!data || !nome){
+    mostrarToast('Preencha data e nome do feriado.', true);
+    return;
+  }
+  const { error } = await supa.from('feriados').insert({ data, nome, tipo, teixeira_plantao: teixeira });
+  if (error){ mostrarToast('Erro ao adicionar feriado: ' + error.message, true); return; }
+  mostrarToast('Feriado adicionado.');
+  document.getElementById('ge-feriado-data').value = '';
+  document.getElementById('ge-feriado-nome').value = '';
+  document.getElementById('ge-feriado-teixeira').checked = false;
+  const { mes, ano } = mesAnoSelecionados();
+  const feriados = await garantirFeriadosDoMes(mes, ano);
+  renderFeriadosLista(feriados);
+});
+
+// ===================== MOTOR DE GERAÇÃO DE ESCALA =====================
+// Observação de regras aplicadas:
+// - Dia útil: 1 delegado + 1 escrivão + 3 investigadores (1 pode ser o Ordinário) em Patos
+// - Fim de semana: 1 delegado + 2 escrivães + 2 investigadores em Patos
+// - Ordinário 24/72 (Patos): 1 investigador/dia, só quem tem a flag, rotação por menos usado recentemente
+// - SECUST: 1 investigador/dia, exclusivo (não conta no time Extra), rotação própria
+// - Teixeira: ativa em fins de semana e feriados marcados - 1 delegado + 1 escrivão + 2 investigadores
+// - Intervalo mínimo de 72h (aproximado como 4 dias corridos) entre plantões do mesmo servidor
+// - Incompatibilidades nunca no mesmo dia (qualquer time)
+// - Pelo menos 1 investigador que dirige, 1 homem, 1 novato no time Extra de Patos
+
+function pairKey(a, b){ return [a, b].sort().join('_'); }
+
+function isOnFerias(servidorId, dataISO, feriasList){
+  return feriasList.some(f => f.servidor_id === servidorId && dataISO >= f.data_inicio && dataISO <= f.data_fim);
+}
+
+function diffDias(dataISOa, dataISOb){
+  const a = new Date(dataISOa + 'T00:00:00');
+  const b = new Date(dataISOb + 'T00:00:00');
+  return Math.round((a - b) / 86400000);
+}
+
+async function gerarEscala(mes, ano){
+  const avisos = [];
+  const { data: servidores } = await supa.from('servidores').select('*').eq('ativo', true);
+  const { data: incompats } = await supa.from('incompatibilidades').select('*');
+  const { data: ferias } = await supa.from('ferias').select('*');
+  const feriados = await garantirFeriadosDoMes(mes, ano);
+
+  const incompatSet = new Set((incompats || []).map(i => pairKey(i.servidor_id_1, i.servidor_id_2)));
+  const feriadosMap = {};
+  (feriados || []).forEach(f => { feriadosMap[f.data] = f; });
+
+  const lastShift = {}; // servidorId -> dataISO da última escalação
+  const diasNoMes = new Date(ano, mes, 0).getDate();
+  const escala = [];
+
+  function disponivel(s, dataISO, poloField){
+    if (isOnFerias(s.id, dataISO, ferias || [])) return false;
+    if (poloField && !s[poloField]) return false;
+    if (lastShift[s.id] && diffDias(dataISO, lastShift[s.id]) < 4) return false;
+    return true;
+  }
+
+  function incompativel(s, assignedToday){
+    return assignedToday.some(o => incompatSet.has(pairKey(s.id, o.id)));
+  }
+
+  function escolher(candidatos, assignedToday){
+    const ordenados = [...candidatos].sort((a, b) => {
+      const la = lastShift[a.id] || '0000-00-00';
+      const lb = lastShift[b.id] || '0000-00-00';
+      return la < lb ? -1 : la > lb ? 1 : 0;
+    });
+    return ordenados.find(s => !incompativel(s, assignedToday)) || null;
+  }
+
+  for (let dia = 1; dia <= diasNoMes; dia++){
+    const dataObj = new Date(ano, mes - 1, dia);
+    const dataISO = `${ano}-${String(mes).padStart(2,'0')}-${String(dia).padStart(2,'0')}`;
+    const diaSemana = ['DOM','SEG','TER','QUA','QUI','SEX','SAB'][dataObj.getDay()];
+    const isWeekend = dataObj.getDay() === 0 || dataObj.getDay() === 6;
+    const feriadoHoje = feriadosMap[dataISO] || null;
+    const temTeixeira = isWeekend || (feriadoHoje && feriadoHoje.teixeira_plantao);
+    const poloPatos = isWeekend ? 'polo_patos_fds' : 'polo_patos_semana';
+
+    const assignedToday = [];
+    const dia_avisos = [];
+
+    // SECUST
+    const secustCand = servidores.filter(s => s.disponivel_secust && disponivel(s, dataISO, null));
+    const secust = escolher(secustCand, assignedToday);
+    if (secust) { assignedToday.push(secust); lastShift[secust.id] = dataISO; }
+    else dia_avisos.push('SECUST sem servidor disponível');
+
+    // Ordinário (Patos)
+    const ordinarioCand = servidores.filter(s => s.disponivel_ordinario && disponivel(s, dataISO, poloPatos));
+    const ordinario = escolher(ordinarioCand, assignedToday);
+    if (ordinario) { assignedToday.push(ordinario); lastShift[ordinario.id] = dataISO; }
+    else dia_avisos.push('Ordinário 24/72 sem servidor disponível');
+
+    // Delegado Patos
+    const delegadoCand = servidores.filter(s => s.cargo === 'delegado' && disponivel(s, dataISO, poloPatos));
+    const delegadoPatos = escolher(delegadoCand, assignedToday);
+    if (delegadoPatos) { assignedToday.push(delegadoPatos); lastShift[delegadoPatos.id] = dataISO; }
+    else dia_avisos.push('Delegado (Patos) sem servidor disponível');
+
+    // Extra Patos - escrivães
+    const totalEscrivoes = isWeekend ? 2 : 1;
+    const totalInvestigadores = isWeekend ? 2 : 3;
+    const escrivaes = [];
+    for (let i = 0; i < totalEscrivoes; i++){
+      const cand = servidores.filter(s => s.cargo === 'escrivao' && !s.disponivel_secust && disponivel(s, dataISO, poloPatos) && !assignedToday.includes(s));
+      const escolhido = escolher(cand, assignedToday);
+      if (escolhido){ escrivaes.push(escolhido); assignedToday.push(escolhido); lastShift[escolhido.id] = dataISO; }
+      else dia_avisos.push('Faltou escrivão (Extra Patos) - vaga ' + (i+1));
+    }
+
+    // Extra Patos - investigadores (ordinário já ocupa 1 vaga)
+    const investigadores = ordinario ? [ordinario] : [];
+    const vagasRestantes = totalInvestigadores - investigadores.length;
+    for (let i = 0; i < vagasRestantes; i++){
+      const cand = servidores.filter(s => s.cargo === 'investigador' && !s.disponivel_secust && disponivel(s, dataISO, poloPatos) && !assignedToday.includes(s));
+      const escolhido = escolher(cand, assignedToday);
+      if (escolhido){ investigadores.push(escolhido); assignedToday.push(escolhido); lastShift[escolhido.id] = dataISO; }
+      else dia_avisos.push('Faltou investigador (Extra Patos) - vaga ' + (i+1));
+    }
+
+    if (!investigadores.some(s => s.dirige)) dia_avisos.push('Nenhum investigador do dia sabe dirigir');
+    if (!investigadores.some(s => s.sexo === 'M')) dia_avisos.push('Nenhum investigador homem no dia');
+    if (!investigadores.some(s => s.novato)) dia_avisos.push('Nenhum investigador novato no dia');
+
+    // Teixeira
+    let teixeira = null;
+    if (temTeixeira){
+      const poloTeix = 'polo_teixeira_fds';
+      const delCand = servidores.filter(s => s.cargo === 'delegado' && disponivel(s, dataISO, poloTeix) && !assignedToday.includes(s));
+      const delegadoTeixeira = escolher(delCand, assignedToday);
+      if (delegadoTeixeira){ assignedToday.push(delegadoTeixeira); lastShift[delegadoTeixeira.id] = dataISO; }
+      else dia_avisos.push('Teixeira: delegado sem servidor disponível');
+
+      const escCand = servidores.filter(s => s.cargo === 'escrivao' && !s.disponivel_secust && disponivel(s, dataISO, poloTeix) && !assignedToday.includes(s));
+      const escrivaoTeixeira = escolher(escCand, assignedToday);
+      if (escrivaoTeixeira){ assignedToday.push(escrivaoTeixeira); lastShift[escrivaoTeixeira.id] = dataISO; }
+      else dia_avisos.push('Teixeira: escrivão sem servidor disponível');
+
+      const investTeixeira = [];
+      for (let i = 0; i < 2; i++){
+        const cand = servidores.filter(s => s.cargo === 'investigador' && !s.disponivel_secust && disponivel(s, dataISO, poloTeix) && !assignedToday.includes(s));
+        const escolhido = escolher(cand, assignedToday);
+        if (escolhido){ investTeixeira.push(escolhido); assignedToday.push(escolhido); lastShift[escolhido.id] = dataISO; }
+        else dia_avisos.push('Teixeira: faltou investigador - vaga ' + (i+1));
+      }
+      teixeira = { delegado: delegadoTeixeira, escrivao: escrivaoTeixeira, investigadores: investTeixeira };
+    }
+
+    escala.push({
+      data: dataISO, diaSemana, feriado: feriadoHoje ? feriadoHoje.nome : null,
+      delegadoPatos, ordinario, secust, escrivaes, investigadores, teixeira
+    });
+
+    if (dia_avisos.length > 0) avisos.push({ data: dataISO, itens: dia_avisos });
+  }
+
+  return { escala, avisos };
+}
+
+function nomeOuTraco(s){ return s ? escapeHtml(s.nome) : '<span style="color:var(--danger);">— vazio —</span>'; }
+
+function renderResultadoEscala(escala, avisos, mes, ano){
+  const painelAvisos = document.getElementById('ge-avisos-panel');
+  if (avisos.length > 0){
+    painelAvisos.classList.remove('hidden');
+    painelAvisos.innerHTML = '<h3 style="margin-top:0; color:var(--danger); font-size:1rem;">Avisos (' + avisos.length + ' dia(s) com pendência)</h3>' +
+      avisos.map(a => `<p style="font-size:.82rem; margin:.3rem 0;"><strong>${formatarData(a.data)}:</strong> ${a.itens.join(' · ')}</p>`).join('');
+  } else {
+    painelAvisos.classList.add('hidden');
+  }
+
+  const painel = document.getElementById('ge-resultado-panel');
+  painel.innerHTML = `
+    <table>
+      <thead><tr>
+        <th>Dia</th><th>Delegado Patos</th><th>Ordinário</th><th>SECUST</th>
+        <th>Escrivães</th><th>Investigadores</th><th>Teixeira</th>
+      </tr></thead>
+      <tbody>
+        ${escala.map(d => `
+          <tr>
+            <td><strong>${d.data.split('-')[2]}</strong> ${d.diaSemana}${d.feriado ? ' <span class="tag on">' + escapeHtml(d.feriado) + '</span>' : ''}</td>
+            <td>${nomeOuTraco(d.delegadoPatos)}</td>
+            <td>${nomeOuTraco(d.ordinario)}</td>
+            <td>${nomeOuTraco(d.secust)}</td>
+            <td>${d.escrivaes.map(s => escapeHtml(s.nome)).join(', ') || '<span style="color:var(--danger);">—</span>'}</td>
+            <td>${d.investigadores.map(s => escapeHtml(s.nome)).join(', ') || '<span style="color:var(--danger);">—</span>'}</td>
+            <td>${d.teixeira ? [d.teixeira.delegado, d.teixeira.escrivao, ...d.teixeira.investigadores].filter(Boolean).map(s=>escapeHtml(s.nome)).join(', ') : '-'}</td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+  `;
+}
+
+document.getElementById('btn-gerar-escala').addEventListener('click', async () => {
+  const { mes, ano } = mesAnoSelecionados();
+  const btn = document.getElementById('btn-gerar-escala');
+  btn.textContent = 'Gerando...';
+  btn.disabled = true;
+  try {
+    const { escala, avisos } = await gerarEscala(mes, ano);
+    renderResultadoEscala(escala, avisos, mes, ano);
+    await supa.from('escalas_geradas').insert({
+      mes, ano,
+      dados: escala,
+      avisos,
+      gerado_por: currentUser.id
+    });
+    mostrarToast('Escala gerada e salva no histórico.' + (avisos.length ? ' Há ' + avisos.length + ' dia(s) com aviso.' : ''), avisos.length > 0);
+  } catch(e){
+    mostrarToast('Erro ao gerar escala: ' + e.message, true);
+  } finally {
+    btn.textContent = 'Gerar Escala';
+    btn.disabled = false;
+  }
+});
+
+// ===================== ESCALAS GERADAS (histórico) =====================
+const MESES_NOME = ['','Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+
+async function carregarHistoricoEscalas(){
+  const { data, error } = await supa.from('escalas_geradas').select('*').order('created_at', { ascending: false });
+  const tbody = document.getElementById('eg-historico-tbody');
+  const emptyEl = document.getElementById('eg-historico-empty');
+  if (error){ mostrarToast('Erro ao carregar histórico: ' + error.message, true); return; }
+  if (!data || data.length === 0){
+    tbody.innerHTML = '';
+    emptyEl.classList.remove('hidden');
+    return;
+  }
+  emptyEl.classList.add('hidden');
+  tbody.innerHTML = data.map(e => `
+    <tr>
+      <td>${MESES_NOME[e.mes]}/${e.ano}</td>
+      <td>${new Date(e.created_at).toLocaleString('pt-BR')}</td>
+      <td><button class="btn-ghost btn-sm" data-ver-escala="${e.id}">Ver</button></td>
+    </tr>
+  `).join('');
+  tbody.querySelectorAll('[data-ver-escala]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const item = data.find(x => x.id === btn.dataset.verEscala);
+      const painel = document.getElementById('eg-detalhe-panel');
+      painel.classList.remove('hidden');
+      const avisosHtml = (item.avisos && item.avisos.length > 0)
+        ? '<div style="border:1px solid var(--danger); border-radius:8px; padding:.8rem; margin-bottom:1rem;"><strong style="color:var(--danger);">Avisos:</strong>' +
+          item.avisos.map(a => `<p style="font-size:.82rem; margin:.3rem 0;">${formatarData(a.data)}: ${a.itens.join(' · ')}</p>`).join('') + '</div>'
+        : '';
+      painel.innerHTML = avisosHtml + `
+        <table>
+          <thead><tr>
+            <th>Dia</th><th>Delegado Patos</th><th>Ordinário</th><th>SECUST</th>
+            <th>Escrivães</th><th>Investigadores</th><th>Teixeira</th>
+          </tr></thead>
+          <tbody>
+            ${item.dados.map(d => `
+              <tr>
+                <td><strong>${d.data.split('-')[2]}</strong> ${d.diaSemana}${d.feriado ? ' <span class="tag on">' + escapeHtml(d.feriado) + '</span>' : ''}</td>
+                <td>${nomeOuTraco(d.delegadoPatos)}</td>
+                <td>${nomeOuTraco(d.ordinario)}</td>
+                <td>${nomeOuTraco(d.secust)}</td>
+                <td>${(d.escrivaes||[]).map(s => escapeHtml(s.nome)).join(', ') || '-'}</td>
+                <td>${(d.investigadores||[]).map(s => escapeHtml(s.nome)).join(', ') || '-'}</td>
+                <td>${d.teixeira ? [d.teixeira.delegado, d.teixeira.escrivao, ...(d.teixeira.investigadores||[])].filter(Boolean).map(s=>escapeHtml(s.nome)).join(', ') : '-'}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      `;
+    });
+  });
 }
 
 // ===================== TOAST =====================
