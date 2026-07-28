@@ -1171,33 +1171,35 @@ function lerEscalaEditadaDoDOM(escalaOriginal, containerId){
   });
 }
 
+function nomeOuTraco(s){ return s ? escapeHtml(s.nome) : '<span style="color:var(--danger);">— vazio —</span>'; }
+
+function linhaSomenteLeitura(d){
+  return `
+    <tr>
+      <td><strong>${d.data.split('-')[2]}</strong> ${d.diaSemana}${d.feriado ? ' <span class="tag on">' + escapeHtml(d.feriado) + '</span>' : ''}</td>
+      <td>${nomeOuTraco(d.delegadoPatos)}${d.viaturaPatos ? '<br><span class="tag">' + escapeHtml(d.viaturaPatos) + '</span>' : ''}</td>
+      <td>${nomeOuTraco(d.ordinario)}</td>
+      <td>${nomeOuTraco(d.secust)}</td>
+      <td>${(d.escrivaes || []).map(s => escapeHtml(s.nome)).join(', ') || '<span style="color:var(--danger);">—</span>'}</td>
+      <td>${(d.investigadores || []).map(s => escapeHtml(s.nome)).join(', ') || '<span style="color:var(--danger);">—</span>'}</td>
+      <td>${d.teixeira ? [d.teixeira.delegado, d.teixeira.escrivao, ...(d.teixeira.investigadores || [])].filter(Boolean).map(s => escapeHtml(s.nome)).join(', ') + (d.viaturaTeixeira ? '<br><span class="tag">' + escapeHtml(d.viaturaTeixeira) + '</span>' : '') : '-'}</td>
+    </tr>
+  `;
+}
+
 function renderResultadoEscala(escala, avisos, mes, ano){
   renderAvisosEm(document.getElementById('ge-avisos-panel'), avisos);
 
   const painel = document.getElementById('ge-resultado-panel');
   painel.innerHTML = `
-    <div style="display:flex; justify-content:flex-end; margin-bottom:.8rem;">
-      <button class="btn-primary" id="btn-salvar-edicao-escala" style="width:auto;">Salvar Alterações</button>
-    </div>
-    <table id="tabela-escala-editavel">
+    <table>
       <thead><tr>
         <th>Dia</th><th>Delegado Patos</th><th>Ordinário</th><th>SECUST</th>
         <th>Escrivães</th><th>Investigadores</th><th>Teixeira</th>
       </tr></thead>
-      <tbody>${escala.map(linhaEditavel).join('')}</tbody>
+      <tbody>${escala.map(linhaSomenteLeitura).join('')}</tbody>
     </table>
   `;
-
-  document.getElementById('btn-salvar-edicao-escala').addEventListener('click', async () => {
-    const editada = lerEscalaEditadaDoDOM(escala, 'tabela-escala-editavel');
-    const novosAvisos = await revalidarEscala(editada);
-    ultimoResultadoEscala.escala = editada;
-    if (ultimoResultadoEscala.id){
-      await supa.from('escalas_geradas').update({ dados: editada, avisos: novosAvisos }).eq('id', ultimoResultadoEscala.id);
-    }
-    renderAvisosEm(document.getElementById('ge-avisos-panel'), novosAvisos);
-    mostrarToast('Alterações salvas.' + (novosAvisos.length ? ' Ainda há ' + novosAvisos.length + ' dia(s) com aviso.' : ' Nenhum aviso pendente.'), novosAvisos.length > 0);
-  });
 }
 
 document.getElementById('btn-gerar-escala').addEventListener('click', async () => {
@@ -1258,26 +1260,14 @@ async function carregarHistoricoEscalas(){
           item.avisos.map(a => `<p style="font-size:.82rem; margin:.3rem 0;">${formatarData(a.data)}: ${a.itens.join(' · ')}</p>`).join('') + '</div>'
         : '';
       document.getElementById('eg-detalhe-conteudo').innerHTML = avisosHtml + `
-        <table id="tabela-escala-historico">
+        <table>
           <thead><tr>
             <th>Dia</th><th>Delegado Patos</th><th>Ordinário</th><th>SECUST</th>
             <th>Escrivães</th><th>Investigadores</th><th>Teixeira</th>
           </tr></thead>
-          <tbody>${item.dados.map(linhaEditavel).join('')}</tbody>
+          <tbody>${item.dados.map(linhaSomenteLeitura).join('')}</tbody>
         </table>
-        <div style="display:flex; justify-content:flex-end; margin-top:.8rem;">
-          <button class="btn-primary" id="btn-salvar-edicao-historico" style="width:auto;">Salvar Alterações</button>
-        </div>
       `;
-      document.getElementById('btn-salvar-edicao-historico').addEventListener('click', async () => {
-        const editada = lerEscalaEditadaDoDOM(item.dados, 'tabela-escala-historico');
-        const novosAvisos = await revalidarEscala(editada);
-        await supa.from('escalas_geradas').update({ dados: editada, avisos: novosAvisos }).eq('id', item.id);
-        item.dados = editada;
-        item.avisos = novosAvisos;
-        mostrarToast('Alterações salvas.' + (novosAvisos.length ? ' Ainda há ' + novosAvisos.length + ' dia(s) com aviso.' : ' Nenhum aviso pendente.'), novosAvisos.length > 0);
-        btn.click(); // reabre a visualização já atualizada com os novos avisos
-      });
     });
   });
 }
@@ -1359,48 +1349,80 @@ function renderAvisosEm(painelEl, avisos){
   }
 }
 
-// ===================== EXPORTAÇÃO PDF (formato baseado no modelo enviado) =====================
-// Observação: o modelo original também trazia a viatura (VTR) de cada delegado.
-// Nosso cadastro de servidores não guarda viatura, então essa coluna não aparece aqui.
+// ===================== EXPORTAÇÃO PDF (estrutura fiel ao modelo original) =====================
 function exportarPDF(escala, mes, ano){
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
 
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(13);
-  doc.text(`ESCALAS – ${MESES_NOME[mes].toUpperCase()}/${ano}`, 40, 28);
+  doc.text(`ESCALAS – ${MESES_NOME[mes].toUpperCase()}/${ano}`, 40, 26);
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8);
-  doc.text(`Gerado em ${new Date().toLocaleString('pt-BR')} · 15ª DSPC - Patos/PB`, 40, 40);
+  doc.text(`Publicada em ${new Date().toLocaleDateString('pt-BR')}`, 40, 38);
+
+  const amareloClaro = [252, 232, 150];
 
   const head = [
     [
       { content: '', styles: { fillColor: [255,255,255] } },
-      { content: 'PATOS', colSpan: 4, styles: { halign: 'center', fillColor: [250, 220, 120] } },
-      { content: 'TEIXEIRA (Extraord.)', colSpan: 2, styles: { halign: 'center', fillColor: [250, 220, 120] } }
+      { content: 'PATOS', colSpan: 4, styles: { halign: 'center', fillColor: amareloClaro } },
+      { content: 'TEIXEIRA (Extraord.)', colSpan: 2, styles: { halign: 'center', fillColor: amareloClaro } }
     ],
-    ['Dia', 'Delegado', 'Ordinário 24/72', "Extra EPC's/IPC's", 'SECUST', 'Delegado', "EPC's/IPC's"]
+    [
+      '',
+      { content: 'EXTRA\nDELEGADOS', styles: { fillColor: amareloClaro, halign: 'center' } },
+      { content: 'Ordinário\n24/72', styles: { fillColor: amareloClaro, halign: 'center' } },
+      { content: 'EXTRA\nEPC\'s / IPC\'s', styles: { fillColor: amareloClaro, halign: 'center' } },
+      { content: 'SECUST', styles: { fillColor: [230,230,230], halign: 'center' } },
+      { content: 'DELEGADOS', styles: { fillColor: amareloClaro, halign: 'center' } },
+      { content: 'EPC\'s / IPC\'s', styles: { fillColor: amareloClaro, halign: 'center' } }
+    ]
   ];
 
-  const body = escala.map(d => ([
-    d.data.split('-')[2] + ' ' + d.diaSemana + (d.feriado ? ' *' : ''),
-    (d.delegadoPatos ? d.delegadoPatos.nome : '—') + (d.viaturaPatos ? '\n' + d.viaturaPatos : ''),
-    d.ordinario ? d.ordinario.nome : '—',
-    [...d.escrivaes, ...d.investigadores].map(s => s.nome).join(', ') || '—',
-    d.secust ? d.secust.nome : '—',
-    (d.teixeira && d.teixeira.delegado) ? d.teixeira.delegado.nome + (d.viaturaTeixeira ? '\n' + d.viaturaTeixeira : '') : '',
-    d.teixeira ? [d.teixeira.escrivao, ...(d.teixeira.investigadores || [])].filter(Boolean).map(s => s.nome).join(', ') : ''
-  ]));
+  const body = escala.map(d => {
+    const delegadoPatosTexto = d.delegadoPatos
+      ? 'DPC ' + d.delegadoPatos.nome + (d.viaturaPatos ? '\n' + d.viaturaPatos : '')
+      : '—';
+
+    // A coluna EXTRA EPC's/IPC's não repete quem já aparece na coluna Ordinário
+    const extraSemOrdinario = [
+      ...(d.escrivaes || []),
+      ...(d.investigadores || []).filter(inv => !d.ordinario || inv.id !== d.ordinario.id)
+    ];
+
+    const teixeiraDelegadoTexto = (d.teixeira && d.teixeira.delegado)
+      ? 'DPC ' + d.teixeira.delegado.nome + (d.viaturaTeixeira ? '\n' + d.viaturaTeixeira : '')
+      : '';
+
+    const teixeiraEquipeTexto = d.teixeira
+      ? (d.teixeira.escrivao ? 'EPC ' + d.teixeira.escrivao.nome + '\n' : '') +
+        (d.teixeira.investigadores || []).map(s => s.nome).join(' e ')
+      : '';
+
+    return [
+      d.data.split('-')[2] + ' ' + d.diaSemana + (d.feriado ? ' *' : ''),
+      delegadoPatosTexto,
+      d.ordinario ? d.ordinario.nome : '',
+      extraSemOrdinario.map(s => s.nome).join(', '),
+      d.secust ? d.secust.nome : '',
+      teixeiraDelegadoTexto,
+      teixeiraEquipeTexto
+    ];
+  });
 
   doc.autoTable({
-    head, body, startY: 50,
-    styles: { fontSize: 7, cellPadding: 3, lineColor: [30,30,30], lineWidth: 0.5 },
-    headStyles: { fillColor: [250, 220, 120], textColor: 20, fontStyle: 'bold' },
+    head, body, startY: 46,
+    styles: { fontSize: 7, cellPadding: 3, lineColor: [0,0,0], lineWidth: 0.5, valign: 'middle' },
     theme: 'grid',
+    columnStyles: { 0: { cellWidth: 55, fontStyle: 'bold' } },
     didParseCell: function(data){
-      if (data.section === 'body'){
+      if (data.section === 'body' && data.column.index === 0){
         const dow = escala[data.row.index].diaSemana;
-        if (dow === 'SAB' || dow === 'DOM') data.cell.styles.fillColor = [255, 245, 225];
+        if (dow === 'SAB' || dow === 'DOM'){
+          data.cell.styles.textColor = [200, 30, 30];
+          data.cell.styles.fontStyle = 'bold';
+        }
       }
     }
   });
