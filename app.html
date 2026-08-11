@@ -137,6 +137,32 @@
     color:var(--text); padding:.8rem 1.2rem; border-radius:8px; font-size:.85rem; z-index:100;
   }
   .toast.error{border-color:var(--danger);}
+
+  .regra-card{
+    display:flex; gap:1rem; padding:1.1rem; border:1px solid var(--border); border-radius:var(--radius);
+    background:var(--panel); margin-bottom:.9rem; align-items:flex-start;
+  }
+  .regra-numero{
+    flex-shrink:0; width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+    font-weight:700; font-size:.95rem; color:#fff;
+  }
+  .regra-numero.obrigatoria{ background:var(--danger); }
+  .regra-numero.preferencia{ background:var(--accent-2); }
+  .regra-titulo{ font-weight:700; margin:0 0 .2rem; font-size:.95rem; }
+  .regra-desc{ font-size:.83rem; color:var(--text-muted); margin:0; line-height:1.5; }
+  .regra-badge{
+    display:inline-block; font-size:.65rem; text-transform:uppercase; letter-spacing:.05em; font-weight:700;
+    padding:.15rem .5rem; border-radius:5px; margin-left:.5rem; vertical-align:middle;
+  }
+  .regra-badge.obrigatoria{ background:#fbe4e4; color:var(--danger); }
+  .regra-badge.preferencia{ background:#e3ecfb; color:var(--accent-2); }
+  .composicao-exemplo{
+    display:flex; gap:.4rem; margin-top:.5rem; flex-wrap:wrap;
+  }
+  .composicao-item{
+    font-size:.7rem; padding:.2rem .55rem; border-radius:5px; font-weight:600;
+    background:var(--panel-2); border:1px solid var(--border);
+  }
 </style>
 </head>
 <body>
@@ -165,6 +191,7 @@
     <div class="logo-sub">15ª DSPC · Patos/PB</div>
     <div class="nav-item active" data-tab="servidores"><i>&#9776;</i> Servidores</div>
     <div class="nav-item" data-tab="feriados"><i>&#127881;</i> Feriados</div>
+    <div class="nav-item" data-tab="regras"><i>&#128220;</i> Regras</div>
     <div class="nav-item" data-tab="gerar-escala"><i>&#128197;</i> Gerar Escala</div>
     <div class="nav-item" data-tab="escalas-geradas"><i>&#128196;</i> Escalas Geradas</div>
   </aside>
@@ -246,6 +273,138 @@
           <tbody id="fer-tbody"></tbody>
         </table>
         <div id="fer-empty" class="empty-state hidden">Nenhum feriado cadastrado para esse ano ainda.</div>
+      </div>
+    </div>
+
+    <div id="tab-content-regras" class="tab-content hidden">
+      <div class="panel" style="margin-bottom:1.2rem;">
+        <p style="font-size:.85rem; color:var(--text-muted); margin:0;">
+          Estas são as regras que o motor de geração aplica, em ordem de prioridade. As marcadas como
+          <span class="regra-badge obrigatoria">Obrigatória</span> nunca são quebradas — se não houver ninguém
+          disponível para cumpri-las, o sistema deixa a vaga vazia e gera um aviso. As marcadas como
+          <span class="regra-badge preferencia">Preferência</span> são usadas como critério de desempate, mas não travam a geração.
+        </p>
+      </div>
+
+      <h3 style="font-size:.95rem; margin:1.4rem 0 .8rem;">Composição das equipes</h3>
+
+      <div class="regra-card">
+        <div class="regra-numero obrigatoria">1</div>
+        <div>
+          <p class="regra-titulo">Tamanho fixo da equipe por dia<span class="regra-badge obrigatoria">Obrigatória</span></p>
+          <p class="regra-desc">Dia de semana e fim de semana têm composições diferentes em Patos. O plantão útil (dia de semana) vai das 18h às 8h do dia seguinte; o de fim de semana cobre 24h.</p>
+          <div class="composicao-exemplo">
+            <span class="composicao-item">Dia de semana: 1 Delegado + 1 Escrivão + 3 Investigadores</span>
+            <span class="composicao-item">Fim de semana: 1 Delegado + 2 Escrivães + 2 Investigadores</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="regra-card">
+        <div class="regra-numero obrigatoria">2</div>
+        <div>
+          <p class="regra-titulo">SECUST é exclusivo<span class="regra-badge obrigatoria">Obrigatória</span></p>
+          <p class="regra-desc">Quem está marcado como disponível para SECUST não entra na contagem do Extra/Ordinário e vice-versa. É um grupo à parte, com rotação própria.</p>
+        </div>
+      </div>
+
+      <div class="regra-card">
+        <div class="regra-numero obrigatoria">3</div>
+        <div>
+          <p class="regra-titulo">Ordinário 24/72 ocupa 1 vaga de investigador<span class="regra-badge obrigatoria">Obrigatória</span></p>
+          <p class="regra-desc">Só quem tem a flag "Disponível para Ordinário" entra nesse rodízio. A pessoa escalada no Ordinário conta como 1 das vagas de investigador do Extra Patos daquele dia. <strong>Exceção:</strong> se quem está de Ordinário for um delegado (ex: Dr. Clenaldo), ele cobre o papel de Delegado do dia - a vaga separada de Delegado Patos fica vaga de propósito, e ele não ocupa vaga de investigador.</p>
+        </div>
+      </div>
+
+      <h3 style="font-size:.95rem; margin:1.4rem 0 .8rem;">Atributos exigidos por equipe (dentro dos investigadores)</h3>
+
+      <div class="regra-card">
+        <div class="regra-numero obrigatoria">4</div>
+        <div>
+          <p class="regra-titulo">Pelo menos 1 investigador que sabe dirigir<span class="regra-badge obrigatoria">Obrigatória</span></p>
+          <p class="regra-desc">Verificado entre todos os investigadores escalados no Extra Patos daquele dia (incluindo quem estiver no Ordinário).</p>
+        </div>
+      </div>
+
+      <div class="regra-card">
+        <div class="regra-numero obrigatoria">5</div>
+        <div>
+          <p class="regra-titulo">Pelo menos 1 investigador homem<span class="regra-badge obrigatoria">Obrigatória</span></p>
+          <p class="regra-desc">Não precisa ser todos - só pelo menos 1 do sexo masculino entre os investigadores do dia.</p>
+        </div>
+      </div>
+
+      <div class="regra-card">
+        <div class="regra-numero obrigatoria">6</div>
+        <div>
+          <p class="regra-titulo">Pelo menos 1 investigador novato OU disposto<span class="regra-badge obrigatoria">Obrigatória</span></p>
+          <p class="regra-desc">Qualquer um dos dois atende a regra - não precisa ser as duas coisas ao mesmo tempo. Um investigador marcado como "Disposto" já cumpre essa exigência mesmo sem ser novato.</p>
+        </div>
+      </div>
+
+      <h3 style="font-size:.95rem; margin:1.4rem 0 .8rem;">Restrições entre pessoas e datas</h3>
+
+      <div class="regra-card">
+        <div class="regra-numero obrigatoria">7</div>
+        <div>
+          <p class="regra-titulo">Incompatibilidades nunca no mesmo dia<span class="regra-badge obrigatoria">Obrigatória</span></p>
+          <p class="regra-desc">Dois servidores marcados como incompatíveis entre si nunca são escalados juntos, em qualquer papel, no mesmo dia (Patos ou Teixeira).</p>
+        </div>
+      </div>
+
+      <div class="regra-card">
+        <div class="regra-numero obrigatoria">8</div>
+        <div>
+          <p class="regra-titulo">Férias e afastamentos bloqueiam a escala<span class="regra-badge obrigatoria">Obrigatória</span></p>
+          <p class="regra-desc">Servidor com um período de férias/afastamento cadastrado que inclua aquele dia nunca é escalado nele.</p>
+        </div>
+      </div>
+
+      <div class="regra-card">
+        <div class="regra-numero obrigatoria">9</div>
+        <div>
+          <p class="regra-titulo">Mínimo de 72h de descanso entre plantões<span class="regra-badge obrigatoria">Obrigatória</span></p>
+          <p class="regra-desc">Vale tanto para quem está no plantão Extra quanto no Ordinário 24/72 e SECUST. Aproximado como um intervalo mínimo de 4 dias corridos entre duas escalas do mesmo servidor.</p>
+        </div>
+      </div>
+
+      <h3 style="font-size:.95rem; margin:1.4rem 0 .8rem;">Teixeira (extraordinário)</h3>
+
+      <div class="regra-card">
+        <div class="regra-numero obrigatoria">10</div>
+        <div>
+          <p class="regra-titulo">Ativado em fins de semana e feriados marcados<span class="regra-badge obrigatoria">Obrigatória</span></p>
+          <p class="regra-desc">Só servidores com a flag "Teixeira - fim de semana/feriados" habilitada podem ser escalados lá.</p>
+          <div class="composicao-exemplo">
+            <span class="composicao-item">Equipe Teixeira: 1 Delegado + 1 Escrivão + 2 Investigadores</span>
+          </div>
+        </div>
+      </div>
+
+      <h3 style="font-size:.95rem; margin:1.4rem 0 .8rem;">Preferências (critério de desempate, não obrigatórias)</h3>
+
+      <div class="regra-card">
+        <div class="regra-numero preferencia">11</div>
+        <div>
+          <p class="regra-titulo">Agrupar por delegacia de origem<span class="regra-badge preferencia">Preferência</span></p>
+          <p class="regra-desc">Ao montar a equipe de Escrivão/Investigador (Extra Patos e Teixeira), o sistema tenta priorizar quem já é da mesma delegacia de origem de alguém que já ficou escalado naquele dia - já que essas pessoas costumam trabalhar juntas. Se não houver ninguém da mesma delegacia disponível, segue normalmente sem travar a geração.</p>
+        </div>
+      </div>
+
+      <div class="regra-card">
+        <div class="regra-numero preferencia">12</div>
+        <div>
+          <p class="regra-titulo">Priorizar um investigador disposto na equipe<span class="regra-badge preferencia">Preferência</span></p>
+          <p class="regra-desc">Ao preencher as vagas de investigador (Extra Patos e Teixeira), se a equipe daquele dia ainda não tem ninguém novato ou disposto, o sistema já tenta escolher um investigador marcado como "Disposto" primeiro - antes mesmo de checar a regra obrigatória no final. Isso reduz a chance de sobrar aviso de "sem novato/disposto" no dia.</p>
+        </div>
+      </div>
+
+      <div class="regra-card">
+        <div class="regra-numero preferencia">13</div>
+        <div>
+          <p class="regra-titulo">Rotação justa (menos usado recentemente primeiro)<span class="regra-badge preferencia">Preferência</span></p>
+          <p class="regra-desc">Entre os candidatos elegíveis para uma vaga, o sistema prioriza quem está há mais tempo sem plantão, para distribuir a carga de forma equilibrada ao longo do mês.</p>
+        </div>
       </div>
     </div>
 
@@ -354,6 +513,7 @@
         <option value="DEAM">DEAM</option>
         <option value="Santa Luzia">Santa Luzia</option>
         <option value="Malta">Malta</option>
+        <option value="Teixeira">Teixeira</option>
         <option value="São Mamede">São Mamede</option>
         <option value="1ª DD">1ª DD</option>
         <option value="2ª DD">2ª DD</option>
@@ -361,6 +521,7 @@
     </div>
     <div class="checkbox-row"><input type="checkbox" id="f-dirige"><label for="f-dirige">Sabe dirigir</label></div>
     <div class="checkbox-row"><input type="checkbox" id="f-novato"><label for="f-novato">Novato</label></div>
+    <div class="checkbox-row"><input type="checkbox" id="f-disposto"><label for="f-disposto">Disposto</label></div>
     <div class="checkbox-row"><input type="checkbox" id="f-ordinario"><label for="f-ordinario">Disponível para Ordinário 24/72 (Patos)</label></div>
     <div class="checkbox-row"><input type="checkbox" id="f-secust"><label for="f-secust">Disponível para SECUST (exclusivo)</label></div>
 
@@ -515,6 +676,7 @@ function renderTabela(){
     const atributos = [];
     if (s.dirige) atributos.push('<span class="tag on">Dirige</span>');
     if (s.novato) atributos.push('<span class="tag on">Novato</span>');
+    if (s.disposto) atributos.push('<span class="tag on">Disposto</span>');
     if (s.disponivel_ordinario) atributos.push('<span class="tag on">Ordinário</span>');
     if (s.disponivel_secust) atributos.push('<span class="tag on">SECUST</span>');
     if (atributos.length === 0) atributos.push('<span class="tag">-</span>');
@@ -575,6 +737,7 @@ function abrirModalNovo(){
   document.getElementById('f-sexo').value = 'M';
   document.getElementById('f-dirige').checked = false;
   document.getElementById('f-novato').checked = false;
+  document.getElementById('f-disposto').checked = false;
   document.getElementById('f-ordinario').checked = false;
   document.getElementById('f-secust').checked = false;
   document.getElementById('f-polo-patos-semana').checked = true;
@@ -599,6 +762,7 @@ async function abrirModalEdicao(id){
   document.getElementById('f-sexo').value = s.sexo;
   document.getElementById('f-dirige').checked = s.dirige;
   document.getElementById('f-novato').checked = s.novato;
+  document.getElementById('f-disposto').checked = s.disposto;
   document.getElementById('f-ordinario').checked = s.disponivel_ordinario;
   document.getElementById('f-secust').checked = s.disponivel_secust;
   document.getElementById('f-polo-patos-semana').checked = s.polo_patos_semana;
@@ -715,6 +879,7 @@ document.getElementById('btn-salvar-servidor').addEventListener('click', async (
     sexo: document.getElementById('f-sexo').value,
     dirige: document.getElementById('f-dirige').checked,
     novato: document.getElementById('f-novato').checked,
+    disposto: document.getElementById('f-disposto').checked,
     disponivel_ordinario: document.getElementById('f-ordinario').checked,
     disponivel_secust: document.getElementById('f-secust').checked,
     polo_patos_semana: document.getElementById('f-polo-patos-semana').checked,
@@ -767,6 +932,7 @@ async function excluirServidor(id){
 const TITULOS_ABA = {
   'servidores': 'Cadastro de Servidores',
   'feriados': 'Feriados e Eventos com Plantão',
+  'regras': 'Regras da Escala',
   'gerar-escala': 'Gerar Escala Mensal',
   'escalas-geradas': 'Escalas Geradas'
 };
@@ -997,12 +1163,20 @@ async function gerarEscala(mes, ano){
     return assignedToday.some(o => incompatSet.has(pairKey(s.id, o.id)));
   }
 
-  function escolher(candidatos, assignedToday, preferirAgrupamento){
+  function escolher(candidatos, assignedToday, preferirAgrupamento, preferirDisposto){
     const ordenados = [...candidatos].sort((a, b) => {
       if (preferirAgrupamento){
         const scoreA = assignedToday.some(o => o.delegacia && o.delegacia === a.delegacia) ? 0 : 1;
         const scoreB = assignedToday.some(o => o.delegacia && o.delegacia === b.delegacia) ? 0 : 1;
         if (scoreA !== scoreB) return scoreA - scoreB;
+      }
+      if (preferirDisposto){
+        const jaTemQualificado = assignedToday.some(o => o.novato || o.disposto);
+        if (!jaTemQualificado){
+          const scoreA = a.disposto ? 0 : 1;
+          const scoreB = b.disposto ? 0 : 1;
+          if (scoreA !== scoreB) return scoreA - scoreB;
+        }
       }
       const la = lastShift[a.id] || '0000-00-00';
       const lb = lastShift[b.id] || '0000-00-00';
@@ -1035,11 +1209,18 @@ async function gerarEscala(mes, ano){
     if (ordinario) { assignedToday.push(ordinario); lastShift[ordinario.id] = dataISO; }
     else dia_avisos.push('Ordinário 24/72 sem servidor disponível');
 
+    // Se quem está de Ordinário já é delegado (ex: Dr. Clenaldo), ele cobre o papel de
+    // Delegado Patos naquele dia - a vaga separada de Delegado fica vaga de propósito.
+    const ordinarioEhDelegado = ordinario && ordinario.cargo === 'delegado';
+
     // Delegado Patos
-    const delegadoCand = servidores.filter(s => s.cargo === 'delegado' && disponivel(s, dataISO, poloPatos));
-    const delegadoPatos = escolher(delegadoCand, assignedToday);
-    if (delegadoPatos) { assignedToday.push(delegadoPatos); lastShift[delegadoPatos.id] = dataISO; }
-    else dia_avisos.push('Delegado (Patos) sem servidor disponível');
+    let delegadoPatos = null;
+    if (!ordinarioEhDelegado){
+      const delegadoCand = servidores.filter(s => s.cargo === 'delegado' && disponivel(s, dataISO, poloPatos));
+      delegadoPatos = escolher(delegadoCand, assignedToday);
+      if (delegadoPatos) { assignedToday.push(delegadoPatos); lastShift[delegadoPatos.id] = dataISO; }
+      else dia_avisos.push('Delegado (Patos) sem servidor disponível');
+    }
 
     // Extra Patos - escrivães
     const totalEscrivoes = isWeekend ? 2 : 1;
@@ -1053,18 +1234,18 @@ async function gerarEscala(mes, ano){
     }
 
     // Extra Patos - investigadores (ordinário já ocupa 1 vaga)
-    const investigadores = ordinario ? [ordinario] : [];
+    const investigadores = (ordinario && !ordinarioEhDelegado) ? [ordinario] : [];
     const vagasRestantes = totalInvestigadores - investigadores.length;
     for (let i = 0; i < vagasRestantes; i++){
       const cand = servidores.filter(s => s.cargo === 'investigador' && !s.disponivel_secust && disponivel(s, dataISO, poloPatos) && !assignedToday.includes(s));
-      const escolhido = escolher(cand, assignedToday, true);
+      const escolhido = escolher(cand, assignedToday, true, true);
       if (escolhido){ investigadores.push(escolhido); assignedToday.push(escolhido); lastShift[escolhido.id] = dataISO; }
       else dia_avisos.push('Faltou investigador (Extra Patos) - vaga ' + (i+1));
     }
 
     if (!investigadores.some(s => s.dirige)) dia_avisos.push('Nenhum investigador do dia sabe dirigir');
     if (!investigadores.some(s => s.sexo === 'M')) dia_avisos.push('Nenhum investigador homem no dia');
-    if (!investigadores.some(s => s.novato)) dia_avisos.push('Nenhum investigador novato no dia');
+    if (!investigadores.some(s => s.novato || s.disposto)) dia_avisos.push('Nenhum investigador novato ou disposto no dia');
 
     // Teixeira
     let teixeira = null;
@@ -1083,7 +1264,7 @@ async function gerarEscala(mes, ano){
       const investTeixeira = [];
       for (let i = 0; i < 2; i++){
         const cand = servidores.filter(s => s.cargo === 'investigador' && !s.disponivel_secust && disponivel(s, dataISO, poloTeix) && !assignedToday.includes(s));
-        const escolhido = escolher(cand, assignedToday, true);
+        const escolhido = escolher(cand, assignedToday, true, true);
         if (escolhido){ investTeixeira.push(escolhido); assignedToday.push(escolhido); lastShift[escolhido.id] = dataISO; }
         else dia_avisos.push('Teixeira: faltou investigador - vaga ' + (i+1));
       }
@@ -1329,7 +1510,7 @@ async function revalidarEscala(escala){
     if ((d.investigadores || []).length < totalInvestigadores) dia_avisos.push('Faltam investigadores no Extra Patos');
     if (!(d.investigadores || []).some(s => s.dirige)) dia_avisos.push('Nenhum investigador do dia sabe dirigir');
     if (!(d.investigadores || []).some(s => s.sexo === 'M')) dia_avisos.push('Nenhum investigador homem no dia');
-    if (!(d.investigadores || []).some(s => s.novato)) dia_avisos.push('Nenhum investigador novato no dia');
+    if (!(d.investigadores || []).some(s => s.novato || s.disposto)) dia_avisos.push('Nenhum investigador novato ou disposto no dia');
 
     const temTeixeira = isWeekend || !!d.feriado;
     if (temTeixeira){
