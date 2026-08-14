@@ -309,10 +309,10 @@
       </div>
 
       <div class="regra-card">
-        <div class="regra-numero obrigatoria">3</div>
+        <div class="regra-numero preferencia">3</div>
         <div>
-          <p class="regra-titulo">Ordinário 24/72 ocupa 1 vaga de investigador<span class="regra-badge obrigatoria">Obrigatória</span></p>
-          <p class="regra-desc">Só quem tem a flag "Disponível para Ordinário" entra nesse rodízio. A pessoa escalada no Ordinário conta como 1 das vagas de investigador do Extra Patos daquele dia. <strong>Exceção:</strong> se quem está de Ordinário for um delegado (ex: Dr. Clenaldo), ele cobre o papel de Delegado do dia - a vaga separada de Delegado Patos fica vaga de propósito, e ele não ocupa vaga de investigador.</p>
+          <p class="regra-titulo">Ordinário 24/72 é opcional<span class="regra-badge preferencia">Preferência</span></p>
+          <p class="regra-desc">Só quem tem a flag "Disponível para Ordinário" entra nesse rodízio - hoje, na prática, é bem raro (só o Dr. Clenaldo eventualmente). Como não é mais um plantão fixo diário, o sistema <strong>não gera aviso</strong> quando não há ninguém disponível para ele naquele dia. Quando alguém está disponível, essa pessoa conta como 1 vaga de investigador do Extra Patos - <strong>exceto</strong> se for delegado (ex: Clenaldo), caso em que ele cobre o papel de Delegado do dia e a vaga separada de Delegado Patos fica vaga de propósito.</p>
         </div>
       </div>
 
@@ -1203,11 +1203,11 @@ async function gerarEscala(mes, ano){
     if (secust) { assignedToday.push(secust); lastShift[secust.id] = dataISO; }
     else dia_avisos.push('SECUST sem servidor disponível');
 
-    // Ordinário (Patos)
+    // Ordinário (Patos) - hoje é raro/opcional (só quem tiver a flag marcada, ex: Dr. Clenaldo
+    // ocasionalmente), então não gera aviso quando ninguém está disponível nesse dia.
     const ordinarioCand = servidores.filter(s => s.disponivel_ordinario && disponivel(s, dataISO, poloPatos));
     const ordinario = escolher(ordinarioCand, assignedToday);
     if (ordinario) { assignedToday.push(ordinario); lastShift[ordinario.id] = dataISO; }
-    else dia_avisos.push('Ordinário 24/72 sem servidor disponível');
 
     // Se quem está de Ordinário já é delegado (ex: Dr. Clenaldo), ele cobre o papel de
     // Delegado Patos naquele dia - a vaga separada de Delegado fica vaga de propósito.
@@ -1415,14 +1415,19 @@ document.getElementById('btn-gerar-escala').addEventListener('click', async () =
     renderResultadoEscala(escala, avisos, mes, ano);
     ultimoResultadoEscala = { escala, mes, ano };
     document.getElementById('btn-exportar-pdf').classList.remove('hidden');
-    const { data: inserido } = await supa.from('escalas_geradas').insert({
+    const { data: inserido, error: erroInsert } = await supa.from('escalas_geradas').insert({
       mes, ano,
       dados: escala,
       avisos,
       gerado_por: currentUser.id
     }).select();
-    ultimoResultadoEscala.id = inserido[0].id;
-    mostrarToast('Escala gerada e salva no histórico.' + (avisos.length ? ' Há ' + avisos.length + ' dia(s) com aviso.' : ''), avisos.length > 0);
+
+    if (erroInsert){
+      mostrarToast('Escala gerada, mas não foi possível salvar no histórico: ' + erroInsert.message, true);
+    } else {
+      ultimoResultadoEscala.id = inserido[0].id;
+      mostrarToast('Escala gerada e salva no histórico.' + (avisos.length ? ' Há ' + avisos.length + ' dia(s) com aviso.' : ''), avisos.length > 0);
+    }
   } catch(e){
     mostrarToast('Erro ao gerar escala: ' + e.message, true);
   } finally {
@@ -1501,7 +1506,6 @@ async function revalidarEscala(escala){
     checar(d.delegadoPatos, 'Delegado Patos');
     if (!d.delegadoPatos) dia_avisos.push('Delegado (Patos) sem servidor');
     checar(d.ordinario, 'Ordinário');
-    if (!d.ordinario) dia_avisos.push('Ordinário 24/72 sem servidor');
     checar(d.secust, 'SECUST');
     if (!d.secust) dia_avisos.push('SECUST sem servidor');
     (d.escrivaes || []).forEach(s => checar(s, 'Escrivão Extra'));
