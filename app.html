@@ -283,26 +283,34 @@
           Cada tipo tem seu próprio intervalo mínimo entre duas escalas da mesma pessoa. "Sem limite" ignora essa regra completamente.
         </p>
         <table>
-          <thead><tr><th>Tipo de plantão</th><th>Intervalo mínimo</th></tr></thead>
+          <thead><tr><th>Tipo de plantão</th><th>Intervalo mínimo</th><th>Seguir à risca</th></tr></thead>
           <tbody>
             <tr>
               <td>Patos (Delegado, Escrivão, Investigador)</td>
               <td><select id="regras-horas-patos"><option value="24">24h</option><option value="48">48h</option><option value="72">72h</option></select></td>
+              <td><input type="checkbox" id="regras-estrito-patos"></td>
             </tr>
             <tr>
               <td>Ordinário 24/72</td>
               <td><select id="regras-horas-ordinario"><option value="24">24h</option><option value="48">48h</option><option value="72">72h</option><option value="">Sem limite</option></select></td>
+              <td><input type="checkbox" id="regras-estrito-ordinario"></td>
             </tr>
             <tr>
               <td>SECUST</td>
               <td><select id="regras-horas-secust"><option value="24">24h</option><option value="48">48h</option><option value="72">72h</option><option value="">Sem limite</option></select></td>
+              <td><input type="checkbox" id="regras-estrito-secust"></td>
             </tr>
             <tr>
               <td>Teixeira</td>
               <td><select id="regras-horas-teixeira"><option value="24">24h</option><option value="48">48h</option><option value="72">72h</option><option value="">Sem limite</option></select></td>
+              <td><input type="checkbox" id="regras-estrito-teixeira"></td>
             </tr>
           </tbody>
         </table>
+        <p style="font-size:.75rem; color:var(--text-muted); margin-top:.6rem;">
+          <strong>Marcado (à risca):</strong> o intervalo é obrigatório - o servidor fica bloqueado até completar o descanso, mesmo que isso deixe uma vaga vazia. Cada setor conta só a própria história (um plantão em Patos não afeta o ciclo do Ordinário, por exemplo).<br>
+          <strong>Desmarcado:</strong> o intervalo é uma preferência - o sistema tenta respeitar, mas pode escalar antes disso se for necessário pra fechar a escala.
+        </p>
         <button class="btn-gold" id="btn-salvar-horas-descanso" style="width:auto; margin-top:1rem;">Salvar</button>
       </div>
 
@@ -611,8 +619,8 @@ let editandoServidorId = null;
 let feriasTemp = []; // usado ao criar servidor novo (antes de ter id)
 let ultimoResultadoEscala = null; // { escala, mes, ano } - último gerado nesta sessão
 let ultimoItemHistorico = null; // item selecionado na aba Escalas Geradas
-let horasDescansoAtual = 48; // mantido por compatibilidade, não usado diretamente mais
 let configDescanso = { patos: 48, ordinario: 72, secust: 48, teixeira: null }; // null = sem limite
+let configEstrito = { patos: true, ordinario: true, secust: true, teixeira: false };
 
 async function carregarConfiguracoes(){
   const { data } = await supa.from('config_sistema').select('*').eq('id', 1).single();
@@ -622,6 +630,12 @@ async function carregarConfiguracoes(){
       ordinario: data.horas_ordinario,
       secust: data.horas_secust,
       teixeira: data.horas_teixeira
+    };
+    configEstrito = {
+      patos: data.estrito_patos,
+      ordinario: data.estrito_ordinario,
+      secust: data.estrito_secust,
+      teixeira: data.estrito_teixeira
     };
   }
 }
@@ -1004,6 +1018,10 @@ document.querySelectorAll('.nav-item[data-tab]').forEach(item => {
       document.getElementById('regras-horas-ordinario').value = configDescanso.ordinario === null ? '' : String(configDescanso.ordinario);
       document.getElementById('regras-horas-secust').value = configDescanso.secust === null ? '' : String(configDescanso.secust);
       document.getElementById('regras-horas-teixeira').value = configDescanso.teixeira === null ? '' : String(configDescanso.teixeira);
+      document.getElementById('regras-estrito-patos').checked = configEstrito.patos;
+      document.getElementById('regras-estrito-ordinario').checked = configEstrito.ordinario;
+      document.getElementById('regras-estrito-secust').checked = configEstrito.secust;
+      document.getElementById('regras-estrito-teixeira').checked = configEstrito.teixeira;
     }
   });
 });
@@ -1163,7 +1181,11 @@ document.getElementById('btn-salvar-horas-descanso').addEventListener('click', a
     horas_patos: lerValor('regras-horas-patos'),
     horas_ordinario: lerValor('regras-horas-ordinario'),
     horas_secust: lerValor('regras-horas-secust'),
-    horas_teixeira: lerValor('regras-horas-teixeira')
+    horas_teixeira: lerValor('regras-horas-teixeira'),
+    estrito_patos: document.getElementById('regras-estrito-patos').checked,
+    estrito_ordinario: document.getElementById('regras-estrito-ordinario').checked,
+    estrito_secust: document.getElementById('regras-estrito-secust').checked,
+    estrito_teixeira: document.getElementById('regras-estrito-teixeira').checked
   };
   if (novaConfig.horas_patos === null){
     mostrarToast('Patos precisa ter um intervalo definido (não pode ser "Sem limite").', true);
@@ -1172,6 +1194,7 @@ document.getElementById('btn-salvar-horas-descanso').addEventListener('click', a
   const { error } = await supa.from('config_sistema').update({ ...novaConfig, updated_at: new Date().toISOString() }).eq('id', 1);
   if (error){ mostrarToast('Erro ao salvar: ' + error.message, true); return; }
   configDescanso = { patos: novaConfig.horas_patos, ordinario: novaConfig.horas_ordinario, secust: novaConfig.horas_secust, teixeira: novaConfig.horas_teixeira };
+  configEstrito = { patos: novaConfig.estrito_patos, ordinario: novaConfig.estrito_ordinario, secust: novaConfig.estrito_secust, teixeira: novaConfig.estrito_teixeira };
   mostrarToast('Configuração de descanso atualizada. Vale a partir da próxima escala gerada.');
 });
 
@@ -1227,7 +1250,9 @@ async function gerarEscala(mes, ano){
   const feriadosMap = {};
   (feriados || []).forEach(f => { feriadosMap[f.data] = f; });
 
-  const lastShift = {}; // servidorId -> dataISO da última escalação
+  // Um "relógio" de descanso por categoria - um plantão em Patos não afeta
+  // o ciclo do Ordinário, e vice-versa. Cada setor conta só a própria história.
+  const lastShiftPorCategoria = { patos: {}, ordinario: {}, secust: {}, teixeira: {} };
   const diasNoMes = new Date(ano, mes, 0).getDate();
   const escala = [];
 
@@ -1235,9 +1260,10 @@ async function gerarEscala(mes, ano){
     if (isOnFerias(s.id, dataISO, ferias || [])) return false;
     if (poloField && !s[poloField]) return false;
     const horas = configDescanso[categoria];
-    if (horas !== null && horas !== undefined){
+    if (horas !== null && horas !== undefined && configEstrito[categoria]){
       const minGap = Math.ceil(horas / 24);
-      if (lastShift[s.id] && diffDias(dataISO, lastShift[s.id]) < minGap) return false;
+      const ultimo = lastShiftPorCategoria[categoria][s.id];
+      if (ultimo && diffDias(dataISO, ultimo) < minGap) return false;
     }
     return true;
   }
@@ -1246,7 +1272,10 @@ async function gerarEscala(mes, ano){
     return assignedToday.some(o => incompatSet.has(pairKey(s.id, o.id)));
   }
 
-  function escolher(candidatos, assignedToday, preferirAgrupamento, preferirDisposto){
+  function escolher(candidatos, assignedToday, categoria, preferirAgrupamento, preferirDisposto){
+    const mapa = lastShiftPorCategoria[categoria] || {};
+    const horas = configDescanso[categoria];
+    const minGap = (horas !== null && horas !== undefined) ? Math.ceil(horas / 24) : null;
     const ordenados = [...candidatos].sort((a, b) => {
       if (preferirAgrupamento){
         const scoreA = assignedToday.some(o => o.delegacia && o.delegacia === a.delegacia) ? 0 : 1;
@@ -1261,16 +1290,26 @@ async function gerarEscala(mes, ano){
           if (scoreA !== scoreB) return scoreA - scoreB;
         }
       }
-      const la = lastShift[a.id] || '0000-00-00';
-      const lb = lastShift[b.id] || '0000-00-00';
+      // Quando a regra não é estrita, ainda preferimos quem já completou o descanso
+      // configurado - só escala quem não completou se não sobrar mais ninguém.
+      if (!configEstrito[categoria] && minGap !== null){
+        const descansadoA = !mapa[a.id] || diffDias(dataAtualLoop, mapa[a.id]) >= minGap ? 0 : 1;
+        const descansadoB = !mapa[b.id] || diffDias(dataAtualLoop, mapa[b.id]) >= minGap ? 0 : 1;
+        if (descansadoA !== descansadoB) return descansadoA - descansadoB;
+      }
+      const la = mapa[a.id] || '0000-00-00';
+      const lb = mapa[b.id] || '0000-00-00';
       return la < lb ? -1 : la > lb ? 1 : 0;
     });
     return ordenados.find(s => !incompativel(s, assignedToday)) || null;
   }
 
+  let dataAtualLoop = null;
+
   for (let dia = 1; dia <= diasNoMes; dia++){
     const dataObj = new Date(ano, mes - 1, dia);
     const dataISO = `${ano}-${String(mes).padStart(2,'0')}-${String(dia).padStart(2,'0')}`;
+    dataAtualLoop = dataISO;
     const diaSemana = ['DOM','SEG','TER','QUA','QUI','SEX','SAB'][dataObj.getDay()];
     const isWeekend = dataObj.getDay() === 0 || dataObj.getDay() === 6;
     const feriadoHoje = feriadosMap[dataISO] || null;
@@ -1282,15 +1321,15 @@ async function gerarEscala(mes, ano){
 
     // SECUST
     const secustCand = servidores.filter(s => s.disponivel_secust && disponivel(s, dataISO, null, 'secust'));
-    const secust = escolher(secustCand, assignedToday);
-    if (secust) { assignedToday.push(secust); lastShift[secust.id] = dataISO; }
+    const secust = escolher(secustCand, assignedToday, 'secust');
+    if (secust) { assignedToday.push(secust); lastShiftPorCategoria.secust[secust.id] = dataISO; }
     else dia_avisos.push('SECUST sem servidor disponível');
 
     // Ordinário (Patos) - hoje é raro/opcional (só quem tiver a flag marcada, ex: Dr. Clenaldo
     // ocasionalmente), então não gera aviso quando ninguém está disponível nesse dia.
     const ordinarioCand = servidores.filter(s => s.disponivel_ordinario && disponivel(s, dataISO, poloPatos, 'ordinario'));
-    const ordinario = escolher(ordinarioCand, assignedToday);
-    if (ordinario) { assignedToday.push(ordinario); lastShift[ordinario.id] = dataISO; }
+    const ordinario = escolher(ordinarioCand, assignedToday, 'ordinario');
+    if (ordinario) { assignedToday.push(ordinario); lastShiftPorCategoria.ordinario[ordinario.id] = dataISO; }
 
     // Se quem está de Ordinário já é delegado (ex: Dr. Clenaldo), ele cobre o papel de
     // Delegado Patos naquele dia - a vaga separada de Delegado fica vaga de propósito.
@@ -1300,8 +1339,8 @@ async function gerarEscala(mes, ano){
     let delegadoPatos = null;
     if (!ordinarioEhDelegado){
       const delegadoCand = servidores.filter(s => s.cargo === 'delegado' && disponivel(s, dataISO, poloPatos, 'patos'));
-      delegadoPatos = escolher(delegadoCand, assignedToday);
-      if (delegadoPatos) { assignedToday.push(delegadoPatos); lastShift[delegadoPatos.id] = dataISO; }
+      delegadoPatos = escolher(delegadoCand, assignedToday, 'patos');
+      if (delegadoPatos) { assignedToday.push(delegadoPatos); lastShiftPorCategoria.patos[delegadoPatos.id] = dataISO; }
       else dia_avisos.push('Delegado (Patos) sem servidor disponível');
     }
 
@@ -1315,8 +1354,8 @@ async function gerarEscala(mes, ano){
     for (let i = 0; i < totalEscrivoes; i++){
       const mulheresNaEquipe = equipeExtra.filter(s => s.sexo === 'F').length;
       const cand = servidores.filter(s => s.cargo === 'escrivao' && !s.disponivel_secust && disponivel(s, dataISO, poloPatos, 'patos') && !assignedToday.includes(s) && !(s.sexo === 'F' && mulheresNaEquipe >= 2));
-      const escolhido = escolher(cand, assignedToday, true);
-      if (escolhido){ escrivaes.push(escolhido); equipeExtra.push(escolhido); assignedToday.push(escolhido); lastShift[escolhido.id] = dataISO; }
+      const escolhido = escolher(cand, assignedToday, 'patos', true);
+      if (escolhido){ escrivaes.push(escolhido); equipeExtra.push(escolhido); assignedToday.push(escolhido); lastShiftPorCategoria.patos[escolhido.id] = dataISO; }
       else dia_avisos.push('Faltou escrivão (Extra Patos) - vaga ' + (i+1));
     }
 
@@ -1324,8 +1363,8 @@ async function gerarEscala(mes, ano){
     for (let i = 0; i < vagasRestantes; i++){
       const mulheresNaEquipe = equipeExtra.filter(s => s.sexo === 'F').length;
       const cand = servidores.filter(s => s.cargo === 'investigador' && !s.disponivel_secust && disponivel(s, dataISO, poloPatos, 'patos') && !assignedToday.includes(s) && !(s.sexo === 'F' && mulheresNaEquipe >= 2));
-      const escolhido = escolher(cand, assignedToday, true, true);
-      if (escolhido){ investigadores.push(escolhido); equipeExtra.push(escolhido); assignedToday.push(escolhido); lastShift[escolhido.id] = dataISO; }
+      const escolhido = escolher(cand, assignedToday, 'patos', true, true);
+      if (escolhido){ investigadores.push(escolhido); equipeExtra.push(escolhido); assignedToday.push(escolhido); lastShiftPorCategoria.patos[escolhido.id] = dataISO; }
       else dia_avisos.push('Faltou investigador (Extra Patos) - vaga ' + (i+1));
     }
 
@@ -1333,29 +1372,29 @@ async function gerarEscala(mes, ano){
     if (!investigadores.some(s => s.sexo === 'M')) dia_avisos.push('Nenhum investigador homem no dia');
     if (!investigadores.some(s => s.novato || s.disposto)) dia_avisos.push('Nenhum investigador novato ou disposto no dia');
 
-    // Teixeira - o intervalo mínimo de 72h não é exigido aqui, para sempre haver
-    // alguém disponível nesse polo (pool de servidores é mais restrito)
+    // Teixeira - por padrão sem limite de descanso configurado (ajustável na aba Regras),
+    // já que o pool de servidores desse polo costuma ser mais restrito
     let teixeira = null;
     if (temTeixeira){
       const poloTeix = 'polo_teixeira_fds';
       const delCand = servidores.filter(s => s.cargo === 'delegado' && disponivel(s, dataISO, poloTeix, 'teixeira') && !assignedToday.includes(s));
-      const delegadoTeixeira = escolher(delCand, assignedToday);
-      if (delegadoTeixeira){ assignedToday.push(delegadoTeixeira); lastShift[delegadoTeixeira.id] = dataISO; }
+      const delegadoTeixeira = escolher(delCand, assignedToday, 'teixeira');
+      if (delegadoTeixeira){ assignedToday.push(delegadoTeixeira); lastShiftPorCategoria.teixeira[delegadoTeixeira.id] = dataISO; }
       else dia_avisos.push('Teixeira: delegado sem servidor disponível');
 
       const equipeTeixeira = [];
       const mulheresEscCand = 0;
       const escCand = servidores.filter(s => s.cargo === 'escrivao' && !s.disponivel_secust && disponivel(s, dataISO, poloTeix, 'teixeira') && !assignedToday.includes(s) && !(s.sexo === 'F' && mulheresEscCand >= 2));
-      const escrivaoTeixeira = escolher(escCand, assignedToday, true);
-      if (escrivaoTeixeira){ assignedToday.push(escrivaoTeixeira); equipeTeixeira.push(escrivaoTeixeira); lastShift[escrivaoTeixeira.id] = dataISO; }
+      const escrivaoTeixeira = escolher(escCand, assignedToday, 'teixeira', true);
+      if (escrivaoTeixeira){ assignedToday.push(escrivaoTeixeira); equipeTeixeira.push(escrivaoTeixeira); lastShiftPorCategoria.teixeira[escrivaoTeixeira.id] = dataISO; }
       else dia_avisos.push('Teixeira: escrivão sem servidor disponível');
 
       const investTeixeira = [];
       for (let i = 0; i < 2; i++){
         const mulheresNaEquipe = equipeTeixeira.filter(s => s.sexo === 'F').length;
         const cand = servidores.filter(s => s.cargo === 'investigador' && !s.disponivel_secust && disponivel(s, dataISO, poloTeix, 'teixeira') && !assignedToday.includes(s) && !(s.sexo === 'F' && mulheresNaEquipe >= 2));
-        const escolhido = escolher(cand, assignedToday, true, true);
-        if (escolhido){ investTeixeira.push(escolhido); equipeTeixeira.push(escolhido); assignedToday.push(escolhido); lastShift[escolhido.id] = dataISO; }
+        const escolhido = escolher(cand, assignedToday, 'teixeira', true, true);
+        if (escolhido){ investTeixeira.push(escolhido); equipeTeixeira.push(escolhido); assignedToday.push(escolhido); lastShiftPorCategoria.teixeira[escolhido.id] = dataISO; }
         else dia_avisos.push('Teixeira: faltou investigador - vaga ' + (i+1));
       }
       teixeira = { delegado: delegadoTeixeira, escrivao: escrivaoTeixeira, investigadores: investTeixeira };
