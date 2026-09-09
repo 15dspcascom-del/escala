@@ -364,7 +364,7 @@
         <div class="regra-numero obrigatoria">9</div>
         <div>
           <p class="regra-titulo">Mínimo de 72h de descanso entre plantões<span class="regra-badge obrigatoria">Obrigatória</span></p>
-          <p class="regra-desc">Vale tanto para quem está no plantão Extra quanto no Ordinário 24/72 e SECUST. Aproximado como um intervalo mínimo de 4 dias corridos entre duas escalas do mesmo servidor.</p>
+          <p class="regra-desc">Vale para Delegado Patos, Extra (Escrivão/Investigador), Ordinário 24/72 e SECUST. Aproximado como um intervalo mínimo de 4 dias corridos entre duas escalas do mesmo servidor. <strong>Exceção: não se aplica ao preencher as vagas de Teixeira</strong> - como o grupo disponível pra esse polo costuma ser menor, essa regra é ignorada ali para sempre conseguir alguém no plantão. Um plantão em Teixeira ainda atualiza a "última escala" da pessoa, então pode afetar a disponibilidade dela pra Patos depois.</p>
         </div>
       </div>
 
@@ -1152,10 +1152,10 @@ async function gerarEscala(mes, ano){
   const diasNoMes = new Date(ano, mes, 0).getDate();
   const escala = [];
 
-  function disponivel(s, dataISO, poloField){
+  function disponivel(s, dataISO, poloField, ignorarDescanso){
     if (isOnFerias(s.id, dataISO, ferias || [])) return false;
     if (poloField && !s[poloField]) return false;
-    if (lastShift[s.id] && diffDias(dataISO, lastShift[s.id]) < 4) return false;
+    if (!ignorarDescanso && lastShift[s.id] && diffDias(dataISO, lastShift[s.id]) < 4) return false;
     return true;
   }
 
@@ -1247,23 +1247,24 @@ async function gerarEscala(mes, ano){
     if (!investigadores.some(s => s.sexo === 'M')) dia_avisos.push('Nenhum investigador homem no dia');
     if (!investigadores.some(s => s.novato || s.disposto)) dia_avisos.push('Nenhum investigador novato ou disposto no dia');
 
-    // Teixeira
+    // Teixeira - o intervalo mínimo de 72h não é exigido aqui, para sempre haver
+    // alguém disponível nesse polo (pool de servidores é mais restrito)
     let teixeira = null;
     if (temTeixeira){
       const poloTeix = 'polo_teixeira_fds';
-      const delCand = servidores.filter(s => s.cargo === 'delegado' && disponivel(s, dataISO, poloTeix) && !assignedToday.includes(s));
+      const delCand = servidores.filter(s => s.cargo === 'delegado' && disponivel(s, dataISO, poloTeix, true) && !assignedToday.includes(s));
       const delegadoTeixeira = escolher(delCand, assignedToday);
       if (delegadoTeixeira){ assignedToday.push(delegadoTeixeira); lastShift[delegadoTeixeira.id] = dataISO; }
       else dia_avisos.push('Teixeira: delegado sem servidor disponível');
 
-      const escCand = servidores.filter(s => s.cargo === 'escrivao' && !s.disponivel_secust && disponivel(s, dataISO, poloTeix) && !assignedToday.includes(s));
+      const escCand = servidores.filter(s => s.cargo === 'escrivao' && !s.disponivel_secust && disponivel(s, dataISO, poloTeix, true) && !assignedToday.includes(s));
       const escrivaoTeixeira = escolher(escCand, assignedToday, true);
       if (escrivaoTeixeira){ assignedToday.push(escrivaoTeixeira); lastShift[escrivaoTeixeira.id] = dataISO; }
       else dia_avisos.push('Teixeira: escrivão sem servidor disponível');
 
       const investTeixeira = [];
       for (let i = 0; i < 2; i++){
-        const cand = servidores.filter(s => s.cargo === 'investigador' && !s.disponivel_secust && disponivel(s, dataISO, poloTeix) && !assignedToday.includes(s));
+        const cand = servidores.filter(s => s.cargo === 'investigador' && !s.disponivel_secust && disponivel(s, dataISO, poloTeix, true) && !assignedToday.includes(s));
         const escolhido = escolher(cand, assignedToday, true, true);
         if (escolhido){ investTeixeira.push(escolhido); assignedToday.push(escolhido); lastShift[escolhido.id] = dataISO; }
         else dia_avisos.push('Teixeira: faltou investigador - vaga ' + (i+1));
