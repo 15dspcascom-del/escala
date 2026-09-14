@@ -3,550 +3,1858 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>15ª DSPC — Registro de Fato Policial</title>
+<title>Escalas 15ª DSPC - Patos</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://cdn.jsdelivr.net/npm/bcryptjs@2.4.3/dist/bcrypt.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <style>
   :root{
-    --azul:#003087;
-    --azul-escuro:#001F5C;
-    --azul-claro:#E8EEFA;
-    --cinza-fundo:#F2F4F8;
-    --cinza-borda:#D7DCE5;
-    --texto:#1B2430;
-    --texto-suave:#5B6472;
-    --verde:#1C8C4B;
-    --vermelho:#C0392B;
-    --branco:#FFFFFF;
-    --raio:10px;
-    --sombra:0 2px 10px rgba(0,26,87,0.08);
+    --bg:#f4f6f9;
+    --panel:#ffffff;
+    --panel-2:#f7f8fa;
+    --border:#dde3ec;
+    --text:#1c2434;
+    --text-muted:#6b7688;
+    --accent:#a9791f;
+    --accent-2:#1d4ed8;
+    --danger:#dc2626;
+    --success:#16a34a;
+    --radius:10px;
   }
   *{box-sizing:border-box;}
-  html,body{margin:0;padding:0;}
   body{
-    font-family:'Inter',system-ui,-apple-system,Segoe UI,sans-serif;
-    background:var(--cinza-fundo);
-    color:var(--texto);
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family:'Inter',sans-serif;
     min-height:100vh;
-    line-height:1.5;
   }
-  .topo{
-    background:linear-gradient(180deg,var(--azul) 0%,var(--azul-escuro) 100%);
-    color:#fff;
-    padding:22px 20px 26px;
-    text-align:center;
+  h1,h2,h3,.brand-font{font-family:'Barlow Condensed',sans-serif; letter-spacing:.03em;}
+  .hidden{display:none !important;}
+
+  /* LOGIN */
+  #login-screen{
+    min-height:100vh; display:flex; align-items:center; justify-content:center;
+    background:radial-gradient(circle at 50% 0%, #eef1f6 0%, #f4f6f9 60%);
   }
-  .topo .sigla{font-size:13px;letter-spacing:.04em;color:#AFC2ED;font-weight:600;margin-bottom:4px;}
-  .topo h1{font-size:19px;font-weight:700;margin:0;}
-  .topo p{font-size:13px;color:#C9D6F2;margin:6px 0 0;}
-  .wrap{max-width:560px;margin:0 auto;padding:18px 16px 60px;}
-  .card{
-    background:var(--branco);
-    border:1px solid var(--cinza-borda);
-    border-radius:var(--raio);
-    box-shadow:var(--sombra);
-    padding:22px;
-    margin-bottom:16px;
+  .login-box{
+    width:100%; max-width:360px; background:var(--panel);
+    border:1px solid var(--border); border-radius:var(--radius);
+    padding:2rem; text-align:center;
   }
-  .passo{
-    display:flex;align-items:center;gap:8px;
-    font-size:12.5px;color:var(--texto-suave);font-weight:600;
-    margin:18px 0 10px;
+  .login-box .badge{
+    display:inline-block; padding:.3rem .9rem; border:1px solid var(--accent);
+    color:var(--accent); border-radius:999px; font-size:.75rem; letter-spacing:.08em;
+    text-transform:uppercase; margin-bottom:1rem;
   }
-  .passo span.bola{
-    width:20px;height:20px;border-radius:50%;
-    background:var(--azul);color:#fff;
-    display:flex;align-items:center;justify-content:center;
-    font-size:11px;flex:none;
+  .login-box h1{font-size:1.6rem; margin:.2rem 0 .3rem; text-transform:uppercase;}
+  .login-box p.sub{color:var(--text-muted); font-size:.85rem; margin:0 0 1.5rem;}
+  input, select, textarea{
+    width:100%; background:var(--panel-2); border:1px solid var(--border);
+    color:var(--text); padding:.6rem .7rem; border-radius:8px; font-size:.9rem;
+    font-family:'Inter',sans-serif;
   }
-  label{
-    display:block;font-size:13.5px;font-weight:600;color:var(--texto);
-    margin:14px 0 6px;
+  input:focus, select:focus, textarea:focus{outline:none; border-color:var(--accent-2);}
+  label{font-size:.8rem; color:var(--text-muted); display:block; margin:0 0 .3rem;}
+  .field{margin-bottom:1rem; text-align:left;}
+  button{
+    cursor:pointer; border:none; border-radius:8px; font-family:'Inter',sans-serif;
+    font-weight:600; font-size:.85rem; padding:.65rem 1.1rem; transition:.15s opacity;
   }
-  label .obr{color:var(--vermelho);margin-left:2px;}
-  label .ajuda{display:block;font-weight:400;color:var(--texto-suave);font-size:12px;margin-top:2px;}
-  input[type=text], input[type=date], input[type=time], input[type=password], textarea, select{
-    width:100%;padding:11px 12px;font-size:15px;font-family:inherit;
-    border:1px solid var(--cinza-borda);border-radius:8px;background:#fff;color:var(--texto);
+  button:hover{opacity:.88;}
+  .btn-primary{background:var(--accent-2); color:#fff; width:100%;}
+  .btn-gold{background:var(--accent); color:#ffffff;}
+  .btn-ghost{background:transparent; border:1px solid var(--border); color:var(--text);}
+  .btn-danger{background:transparent; border:1px solid var(--danger); color:var(--danger);}
+  .btn-sm{padding:.4rem .7rem; font-size:.78rem;}
+  #login-error{color:var(--danger); font-size:.8rem; margin-top:.8rem; min-height:1em;}
+
+  /* APP SHELL */
+  #app-screen{display:flex; min-height:100vh;}
+  aside{
+    width:230px; background:var(--panel); border-right:1px solid var(--border);
+    padding:1.4rem 1rem; flex-shrink:0;
   }
-  input:focus, textarea:focus, select:focus{outline:2px solid var(--azul);outline-offset:1px;border-color:var(--azul);}
-  textarea{min-height:78px;resize:vertical;}
-  .btn{
-    display:inline-flex;align-items:center;justify-content:center;gap:8px;
-    width:100%;padding:13px 16px;font-size:15px;font-weight:700;
-    border:none;border-radius:8px;cursor:pointer;margin-top:6px;
-    background:var(--azul);color:#fff;transition:background .15s ease;
+  aside .logo{font-size:1.1rem; text-transform:uppercase; margin-bottom:.1rem;}
+  aside .logo-sub{font-size:.7rem; color:var(--text-muted); margin-bottom:2rem;}
+  .nav-item{
+    display:flex; align-items:center; gap:.5rem; padding:.6rem .7rem; border-radius:8px;
+    color:var(--text-muted); font-size:.85rem; font-weight:600; cursor:pointer; margin-bottom:.3rem;
   }
-  .btn:hover{background:var(--azul-escuro);}
-  .btn:disabled{background:#9AA6B8;cursor:not-allowed;}
-  .btn.secundario{background:transparent;color:var(--azul);border:1px solid var(--azul);}
-  .btn.secundario:hover{background:var(--azul-claro);}
-  .erro{
-    background:#FBEAE8;color:var(--vermelho);border:1px solid #F1C2BC;
-    padding:10px 12px;border-radius:8px;font-size:13.5px;margin-top:12px;
+  .nav-item.active{background:var(--panel-2); color:var(--accent);}
+  .nav-item.disabled{opacity:.4; cursor:not-allowed;}
+  main{flex:1; padding:2rem 2.4rem; max-width:1400px;}
+  .topbar{display:flex; justify-content:space-between; align-items:center; margin-bottom:1.6rem;}
+  .topbar h1{font-size:1.5rem; margin:0; text-transform:uppercase;}
+  .user-chip{display:flex; align-items:center; gap:.7rem; font-size:.8rem; color:var(--text-muted);}
+
+  .panel{background:var(--panel); border:1px solid var(--border); border-radius:var(--radius); padding:1.4rem;}
+  table{width:100%; border-collapse:collapse; font-size:.85rem;}
+  th{
+    text-align:left; color:var(--text-muted); font-weight:600; font-size:.72rem;
+    text-transform:uppercase; letter-spacing:.04em; padding:.5rem .6rem; border-bottom:1px solid var(--border);
   }
-  .fato-opcao{
-    display:flex;align-items:flex-start;gap:12px;
-    border:1.5px solid var(--cinza-borda);border-radius:var(--raio);
-    padding:14px;margin-bottom:10px;cursor:pointer;background:#fff;
-    transition:border-color .12s ease, background .12s ease;
+  td{padding:.6rem; border-bottom:1px solid var(--border); vertical-align:middle;}
+  tr:last-child td{border-bottom:none;}
+  .tag{
+    display:inline-block; font-size:.7rem; padding:.15rem .5rem; border-radius:5px; margin:1px 2px;
+    background:var(--panel-2); border:1px solid var(--border); color:var(--text-muted);
   }
-  .fato-opcao:hover{border-color:var(--azul);}
-  .fato-opcao .marca{
-    width:18px;height:18px;border-radius:50%;border:2px solid var(--cinza-borda);
-    flex:none;margin-top:2px;
+  .tag.on{border-color:var(--accent); color:var(--accent);}
+  .pill-cargo{
+    font-size:.7rem; padding:.2rem .55rem; border-radius:5px; font-weight:600; text-transform:uppercase;
   }
-  .fato-opcao .txt strong{display:block;font-size:14.5px;color:var(--texto);}
-  .fato-opcao .txt span{display:block;font-size:12.5px;color:var(--texto-suave);margin-top:2px;}
-  .cabecalho-formulario{
-    border-bottom:1px solid var(--cinza-borda);padding-bottom:14px;margin-bottom:4px;
+  .pill-escrivao{background:#e3ecfb; color:#1d4ed8;}
+  .pill-investigador{background:#f6ecd8; color:#a9791f;}
+  .pill-delegado{background:#fbe4e4; color:#b91c1c;}
+
+  /* MODAL */
+  .modal-overlay{
+    position:fixed; inset:0; background:rgba(0,0,0,.6); display:flex; align-items:flex-start;
+    justify-content:center; padding:2.5rem 1rem; overflow-y:auto; z-index:50;
   }
-  .cabecalho-formulario .tag{
-    display:inline-block;background:var(--azul-claro);color:var(--azul);
-    font-size:11.5px;font-weight:700;padding:3px 9px;border-radius:20px;margin-bottom:8px;
+  .modal{
+    background:var(--panel); border:1px solid var(--border); border-radius:var(--radius);
+    width:100%; max-width:640px; padding:1.6rem;
   }
-  .cabecalho-formulario h2{font-size:17px;margin:0 0 4px;}
-  .cabecalho-formulario p{font-size:13px;color:var(--texto-suave);margin:0;}
-  .rodape-form{margin-top:22px;padding-top:16px;border-top:1px solid var(--cinza-borda);}
-  .voltar{
-    background:none;border:none;color:var(--texto-suave);font-size:13px;
-    cursor:pointer;padding:0;margin-bottom:14px;display:inline-flex;align-items:center;gap:5px;
+  .modal h2{margin:0 0 1.2rem; font-size:1.3rem; text-transform:uppercase;}
+  .grid-2{display:grid; grid-template-columns:1fr 1fr; gap:1rem;}
+  .checkbox-row{display:flex; align-items:center; gap:.5rem; margin-bottom:.6rem;}
+  .checkbox-row input{width:auto;}
+  .checkbox-row label{margin:0; color:var(--text); font-size:.85rem;}
+  .section-title{
+    font-size:.75rem; text-transform:uppercase; letter-spacing:.06em; color:var(--accent);
+    margin:1.2rem 0 .6rem; border-top:1px solid var(--border); padding-top:1rem;
   }
-  .voltar:hover{color:var(--azul);}
-  .sucesso{text-align:center;padding:20px 6px;}
-  .sucesso .icone{
-    width:56px;height:56px;border-radius:50%;background:#E7F5EC;color:var(--verde);
-    display:flex;align-items:center;justify-content:center;margin:0 auto 14px;font-size:28px;
+  .modal-actions{display:flex; justify-content:flex-end; gap:.6rem; margin-top:1.4rem;}
+  .incompat-list{max-height:150px; overflow-y:auto; background:var(--panel-2); border:1px solid var(--border); border-radius:8px; padding:.6rem;}
+  .ferias-item{display:flex; justify-content:space-between; align-items:center; padding:.4rem .6rem; background:var(--panel-2); border-radius:6px; margin-bottom:.4rem; font-size:.82rem;}
+  .empty-state{text-align:center; padding:2.5rem 1rem; color:var(--text-muted);}
+  .toast{
+    position:fixed; bottom:1.5rem; right:1.5rem; background:var(--panel); border:1px solid var(--accent);
+    color:var(--text); padding:.8rem 1.2rem; border-radius:8px; font-size:.85rem; z-index:100;
   }
-  .sucesso h2{font-size:18px;margin:0 0 6px;}
-  .sucesso p{font-size:13.5px;color:var(--texto-suave);margin:0 0 18px;}
-  input[type=file]{
-    width:100%;font-size:13.5px;padding:10px;border:1px dashed var(--cinza-borda);
-    border-radius:8px;background:#fafbfc;
+  .toast.error{border-color:var(--danger);}
+
+  .regra-card{
+    display:flex; gap:1rem; padding:1.1rem; border:1px solid var(--border); border-radius:var(--radius);
+    background:var(--panel); margin-bottom:.9rem; align-items:flex-start;
   }
-  .oculto{display:none !important;}
-  .rodape-app{text-align:center;font-size:11.5px;color:var(--texto-suave);margin-top:10px;}
+  .regra-numero{
+    flex-shrink:0; width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+    font-weight:700; font-size:.95rem; color:#fff;
+  }
+  .regra-numero.obrigatoria{ background:var(--danger); }
+  .regra-numero.preferencia{ background:var(--accent-2); }
+  .regra-titulo{ font-weight:700; margin:0 0 .2rem; font-size:.95rem; }
+  .regra-desc{ font-size:.83rem; color:var(--text-muted); margin:0; line-height:1.5; }
+  .regra-badge{
+    display:inline-block; font-size:.65rem; text-transform:uppercase; letter-spacing:.05em; font-weight:700;
+    padding:.15rem .5rem; border-radius:5px; margin-left:.5rem; vertical-align:middle;
+  }
+  .regra-badge.obrigatoria{ background:#fbe4e4; color:var(--danger); }
+  .regra-badge.preferencia{ background:#e3ecfb; color:var(--accent-2); }
+  .composicao-exemplo{
+    display:flex; gap:.4rem; margin-top:.5rem; flex-wrap:wrap;
+  }
+  .composicao-item{
+    font-size:.7rem; padding:.2rem .55rem; border-radius:5px; font-weight:600;
+    background:var(--panel-2); border:1px solid var(--border);
+  }
 </style>
 </head>
 <body>
 
-<div class="topo">
-  <div class="sigla">15ª DSPC · Assessoria de Comunicação Social</div>
-  <h1>Registro de Fato Policial</h1>
-  <p>Preenchimento pelo policial responsável pela ocorrência/prisão</p>
+<div id="login-screen">
+  <div class="login-box">
+    <span class="badge">15ª DSPC · Patos</span>
+    <h1>Sistema de Escalas</h1>
+    <p class="sub">Acesso restrito à Assessoria 15 DSPC</p>
+    <div class="field">
+      <label>E-mail</label>
+      <input type="email" id="login-email" placeholder="seunome@pc.pb.gov.br">
+    </div>
+    <div class="field">
+      <label>Senha</label>
+      <input type="password" id="login-senha" placeholder="Sua senha">
+    </div>
+    <button class="btn-primary" id="btn-login">Entrar</button>
+    <div id="login-error"></div>
+  </div>
 </div>
 
-<div class="wrap">
-
-  <!-- TELA DE LOGIN -->
-  <div id="tela-login" class="card">
-    <label for="campo-senha">Senha de acesso<span class="obr">*</span></label>
-    <input type="password" id="campo-senha" placeholder="Digite a senha da delegacia" autocomplete="current-password">
-    <button class="btn" id="btn-entrar" onclick="tentarLogin()">Entrar</button>
-    <div id="erro-login" class="erro oculto"></div>
-  </div>
-
-  <!-- ETAPA 1: ESCOLHA DO FATO -->
-  <div id="tela-escolha" class="card oculto">
-    <div class="passo"><span class="bola">1</span> Selecione a natureza do fato</div>
-    <div id="lista-fatos"></div>
-  </div>
-
-  <!-- ETAPA 2: FORMULÁRIO DINÂMICO -->
-  <div id="tela-formulario" class="card oculto">
-    <button class="voltar" onclick="voltarParaEscolha()">‹ Trocar tipo de fato</button>
-    <div class="passo"><span class="bola">2</span> Preencha os dados do fato</div>
-    <div class="cabecalho-formulario">
-      <span class="tag" id="form-tag"></span>
-      <h2 id="form-titulo"></h2>
-      <p id="form-descricao"></p>
-    </div>
-    <div id="campos-dinamicos"></div>
-
-    <div class="rodape-form">
-      <label>Delegacia de autuação<span class="obr">*</span></label>
-      <input type="text" id="campo-delegacia" placeholder="Ex.: 3ª Delegacia Distrital de Patos">
-
-      <label>Responsável pelo preenchimento<span class="obr">*</span></label>
-      <input type="text" id="campo-responsavel" placeholder="Nome e matrícula do policial">
-
-      <label>Upload de imagem ou vídeo do ocorrido
-        <span class="ajuda">Opcional — um arquivo por envio</span>
-      </label>
-      <input type="file" id="campo-midia" accept="image/*,video/*">
+<div id="app-screen" class="hidden">
+  <aside>
+    <div class="logo">Escalas</div>
+    <div class="logo-sub">15ª DSPC · Patos/PB</div>
+    <div class="nav-item active" data-tab="servidores"><i>&#9776;</i> Servidores</div>
+    <div class="nav-item" data-tab="feriados"><i>&#127881;</i> Feriados</div>
+    <div class="nav-item" data-tab="regras"><i>&#128220;</i> Regras</div>
+    <div class="nav-item" data-tab="gerar-escala"><i>&#128197;</i> Gerar Escala</div>
+    <div class="nav-item" data-tab="escalas-geradas"><i>&#128196;</i> Escalas Geradas</div>
+  </aside>
+  <main>
+    <div class="topbar">
+      <h1 id="topbar-title">Cadastro de Servidores</h1>
+      <div class="user-chip">
+        <span id="user-email"></span>
+        <button class="btn-ghost btn-sm" id="btn-logout">Sair</button>
+      </div>
     </div>
 
-    <button class="btn" id="btn-enviar" onclick="enviarRegistro()">Enviar registro</button>
-    <div id="erro-formulario" class="erro oculto"></div>
-  </div>
+    <div id="tab-content-servidores" class="tab-content">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; gap:1rem;">
+      <div style="display:flex; align-items:center; gap:.8rem;">
+        <div style="color:var(--text-muted); font-size:.85rem;" id="servidores-count">Carregando...</div>
+        <select id="filtro-cargo" style="width:auto; min-width:160px;">
+          <option value="todos">Todos os cargos</option>
+          <option value="escrivao">Escrivão</option>
+          <option value="investigador">Investigador</option>
+          <option value="delegado">Delegado</option>
+        </select>
+      </div>
+      <button class="btn-gold" id="btn-novo-servidor">+ Novo Servidor</button>
+    </div>
 
-  <!-- TELA DE SUCESSO -->
-  <div id="tela-sucesso" class="card sucesso oculto">
-    <div class="icone">✓</div>
-    <h2>Registro enviado</h2>
-    <p>Os dados foram salvos e a Assessoria de Comunicação foi notificada por e-mail.</p>
-    <button class="btn secundario" onclick="reiniciarFormulario()">Registrar outro fato</button>
-  </div>
+    <div class="panel">
+      <table id="tabela-servidores">
+        <thead>
+          <tr>
+            <th>Nome</th>
+            <th>Cargo</th>
+            <th>Sexo</th>
+            <th>Atributos</th>
+            <th>Polos</th>
+            <th>Status</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="servidores-tbody"></tbody>
+      </table>
+      <div id="servidores-empty" class="empty-state hidden">Nenhum servidor cadastrado ainda. Clique em "Novo Servidor" para começar.</div>
+    </div>
+    </div>
 
-  <div class="rodape-app">15ª DSPC — Sistema interno de registro de fatos policiais</div>
+    <div id="tab-content-feriados" class="tab-content hidden">
+      <div class="panel" style="margin-bottom:1.2rem;">
+        <div style="display:flex; align-items:flex-end; gap:1rem; flex-wrap:wrap;">
+          <div class="field" style="margin:0; min-width:110px;">
+            <label>Ano</label>
+            <input type="number" id="fer-ano" min="2025" max="2030">
+          </div>
+          <button class="btn-ghost" id="btn-carregar-feriados-ano" style="width:auto;">Carregar feriados do ano</button>
+        </div>
+      </div>
+
+      <div class="panel" style="margin-bottom:1.2rem;">
+        <h3 style="margin-top:0; font-size:1rem;">Novo feriado / evento com plantão extraordinário</h3>
+        <div class="grid-2">
+          <div class="field"><label>Data</label><input type="date" id="fer-data"></div>
+          <div class="field"><label>Nome</label><input type="text" id="fer-nome" placeholder="Ex: Nossa Senhora das Neves"></div>
+        </div>
+        <div style="display:flex; align-items:center; gap:1rem; margin-top:.5rem; flex-wrap:wrap;">
+          <select id="fer-tipo" style="width:auto;">
+            <option value="estadual">Estadual</option>
+            <option value="municipal">Municipal</option>
+            <option value="nacional">Nacional</option>
+          </select>
+          <div class="checkbox-row" style="margin:0;">
+            <input type="checkbox" id="fer-teixeira"><label for="fer-teixeira">Tem plantão em Teixeira</label>
+          </div>
+          <button class="btn-gold" id="btn-add-feriado-tab" style="width:auto;">+ Adicionar</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <table>
+          <thead><tr><th>Data</th><th>Nome</th><th>Tipo</th><th>Teixeira</th><th></th></tr></thead>
+          <tbody id="fer-tbody"></tbody>
+        </table>
+        <div id="fer-empty" class="empty-state hidden">Nenhum feriado cadastrado para esse ano ainda.</div>
+      </div>
+    </div>
+
+    <div id="tab-content-regras" class="tab-content hidden">
+      <div class="panel" style="margin-bottom:1.2rem;">
+        <h3 style="margin-top:0; font-size:1rem;">Intervalo mínimo de descanso por tipo de plantão</h3>
+        <p style="font-size:.83rem; color:var(--text-muted); margin:0 0 1rem;">
+          Cada tipo tem seu próprio intervalo mínimo entre duas escalas da mesma pessoa. "Sem limite" ignora essa regra completamente.
+        </p>
+        <table>
+          <thead><tr><th>Tipo de plantão</th><th>Intervalo mínimo</th><th>Seguir à risca</th></tr></thead>
+          <tbody>
+            <tr>
+              <td>Patos (Delegado, Escrivão, Investigador)</td>
+              <td><select id="regras-horas-patos"><option value="24">24h</option><option value="48">48h</option><option value="72">72h</option></select></td>
+              <td><input type="checkbox" id="regras-estrito-patos"></td>
+            </tr>
+            <tr>
+              <td>Ordinário 24/72</td>
+              <td><select id="regras-horas-ordinario"><option value="24">24h</option><option value="48">48h</option><option value="72">72h</option><option value="">Sem limite</option></select></td>
+              <td><input type="checkbox" id="regras-estrito-ordinario"></td>
+            </tr>
+            <tr>
+              <td>SECUST</td>
+              <td><select id="regras-horas-secust"><option value="24">24h</option><option value="48">48h</option><option value="72">72h</option><option value="">Sem limite</option></select></td>
+              <td><input type="checkbox" id="regras-estrito-secust"></td>
+            </tr>
+            <tr>
+              <td>Teixeira</td>
+              <td><select id="regras-horas-teixeira"><option value="24">24h</option><option value="48">48h</option><option value="72">72h</option><option value="">Sem limite</option></select></td>
+              <td><input type="checkbox" id="regras-estrito-teixeira"></td>
+            </tr>
+          </tbody>
+        </table>
+        <p style="font-size:.75rem; color:var(--text-muted); margin-top:.6rem;">
+          <strong>Marcado (à risca):</strong> o intervalo é obrigatório - o servidor fica bloqueado até completar o descanso, mesmo que isso deixe uma vaga vazia. Cada setor conta só a própria história (um plantão em Patos não afeta o ciclo do Ordinário, por exemplo).<br>
+          <strong>Desmarcado:</strong> o intervalo é uma preferência - o sistema tenta respeitar, mas pode escalar antes disso se for necessário pra fechar a escala.
+        </p>
+        <button class="btn-gold" id="btn-salvar-horas-descanso" style="width:auto; margin-top:1rem;">Salvar</button>
+      </div>
+
+      <div class="panel" style="margin-bottom:1.2rem;">
+        <p style="font-size:.85rem; color:var(--text-muted); margin:0;">
+          Estas são as regras que o motor de geração aplica, em ordem de prioridade. As marcadas como
+          <span class="regra-badge obrigatoria">Obrigatória</span> nunca são quebradas — se não houver ninguém
+          disponível para cumpri-las, o sistema deixa a vaga vazia e gera um aviso. As marcadas como
+          <span class="regra-badge preferencia">Preferência</span> são usadas como critério de desempate, mas não travam a geração.
+        </p>
+      </div>
+
+      <h3 style="font-size:.95rem; margin:1.4rem 0 .8rem;">Composição das equipes</h3>
+
+      <div class="regra-card">
+        <div class="regra-numero obrigatoria">1</div>
+        <div>
+          <p class="regra-titulo">Tamanho fixo da equipe por dia<span class="regra-badge obrigatoria">Obrigatória</span></p>
+          <p class="regra-desc">Dia de semana e fim de semana têm composições diferentes em Patos. O plantão útil (dia de semana) vai das 18h às 8h do dia seguinte; o de fim de semana cobre 24h.</p>
+          <div class="composicao-exemplo">
+            <span class="composicao-item">Dia de semana: 1 Delegado + 1 Escrivão + 3 Investigadores</span>
+            <span class="composicao-item">Fim de semana: 1 Delegado + 2 Escrivães + 2 Investigadores</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="regra-card">
+        <div class="regra-numero obrigatoria">2</div>
+        <div>
+          <p class="regra-titulo">SECUST é exclusivo<span class="regra-badge obrigatoria">Obrigatória</span></p>
+          <p class="regra-desc">Quem está marcado como disponível para SECUST não entra na contagem do Extra/Ordinário e vice-versa. É um grupo à parte, com rotação própria.</p>
+        </div>
+      </div>
+
+      <div class="regra-card">
+        <div class="regra-numero preferencia">3</div>
+        <div>
+          <p class="regra-titulo">Ordinário 24/72 é opcional<span class="regra-badge preferencia">Preferência</span></p>
+          <p class="regra-desc">Só quem tem a flag "Disponível para Ordinário" entra nesse rodízio - hoje, na prática, é bem raro (só o Dr. Clenaldo eventualmente). Como não é mais um plantão fixo diário, o sistema <strong>não gera aviso</strong> quando não há ninguém disponível para ele naquele dia. Quando alguém está disponível, essa pessoa conta como 1 vaga de investigador do Extra Patos - <strong>exceto</strong> se for delegado (ex: Clenaldo), caso em que ele cobre o papel de Delegado do dia e a vaga separada de Delegado Patos fica vaga de propósito.</p>
+        </div>
+      </div>
+
+      <h3 style="font-size:.95rem; margin:1.4rem 0 .8rem;">Atributos exigidos por equipe (dentro dos investigadores)</h3>
+
+      <div class="regra-card">
+        <div class="regra-numero obrigatoria">4</div>
+        <div>
+          <p class="regra-titulo">Pelo menos 1 investigador que sabe dirigir<span class="regra-badge obrigatoria">Obrigatória</span></p>
+          <p class="regra-desc">Verificado entre todos os investigadores escalados no Extra Patos daquele dia (incluindo quem estiver no Ordinário).</p>
+        </div>
+      </div>
+
+      <div class="regra-card">
+        <div class="regra-numero obrigatoria">5</div>
+        <div>
+          <p class="regra-titulo">Pelo menos 1 investigador homem<span class="regra-badge obrigatoria">Obrigatória</span></p>
+          <p class="regra-desc">Não precisa ser todos - só pelo menos 1 do sexo masculino entre os investigadores do dia.</p>
+        </div>
+      </div>
+
+      <div class="regra-card">
+        <div class="regra-numero obrigatoria">6</div>
+        <div>
+          <p class="regra-titulo">Pelo menos 1 investigador novato OU disposto<span class="regra-badge obrigatoria">Obrigatória</span></p>
+          <p class="regra-desc">Qualquer um dos dois atende a regra - não precisa ser as duas coisas ao mesmo tempo. Um investigador marcado como "Disposto" já cumpre essa exigência mesmo sem ser novato.</p>
+        </div>
+      </div>
+
+      <div class="regra-card">
+        <div class="regra-numero obrigatoria">7</div>
+        <div>
+          <p class="regra-titulo">No máximo 2 mulheres por equipe<span class="regra-badge obrigatoria">Obrigatória</span></p>
+          <p class="regra-desc">Contando Escrivães + Investigadores juntos (Extra Patos, e também na equipe de Teixeira, separadamente). O motor já filtra candidatas mulheres ao preencher as vagas restantes assim que a equipe daquele dia atinge 2.</p>
+        </div>
+      </div>
+
+      <h3 style="font-size:.95rem; margin:1.4rem 0 .8rem;">Restrições entre pessoas e datas</h3>
+
+      <div class="regra-card">
+        <div class="regra-numero obrigatoria">8</div>
+        <div>
+          <p class="regra-titulo">Incompatibilidades nunca no mesmo dia<span class="regra-badge obrigatoria">Obrigatória</span></p>
+          <p class="regra-desc">Dois servidores marcados como incompatíveis entre si nunca são escalados juntos, em qualquer papel, no mesmo dia (Patos ou Teixeira).</p>
+        </div>
+      </div>
+
+      <div class="regra-card">
+        <div class="regra-numero obrigatoria">9</div>
+        <div>
+          <p class="regra-titulo">Férias e afastamentos bloqueiam a escala<span class="regra-badge obrigatoria">Obrigatória</span></p>
+          <p class="regra-desc">Servidor com um período de férias/afastamento cadastrado que inclua aquele dia nunca é escalado nele.</p>
+        </div>
+      </div>
+
+      <div class="regra-card">
+        <div class="regra-numero obrigatoria">10</div>
+        <div>
+          <p class="regra-titulo">Intervalo mínimo de descanso entre plantões<span class="regra-badge obrigatoria">Obrigatória</span></p>
+          <p class="regra-desc">Configurável separadamente por tipo de plantão no topo desta página: Patos (padrão 48h), Ordinário (padrão 72h - não é afetado pela mudança geral, fica isolado), SECUST (padrão 48h) e Teixeira (padrão sem limite, pode ser configurado se quiser). Qualquer um pode ser ajustado para 24h, 48h, 72h ou "Sem limite".</p>
+        </div>
+      </div>
+
+      <h3 style="font-size:.95rem; margin:1.4rem 0 .8rem;">Teixeira (extraordinário)</h3>
+
+      <div class="regra-card">
+        <div class="regra-numero obrigatoria">11</div>
+        <div>
+          <p class="regra-titulo">Ativado em fins de semana e feriados marcados<span class="regra-badge obrigatoria">Obrigatória</span></p>
+          <p class="regra-desc">Só servidores com a flag "Teixeira - fim de semana/feriados" habilitada podem ser escalados lá.</p>
+          <div class="composicao-exemplo">
+            <span class="composicao-item">Equipe Teixeira: 1 Delegado + 1 Escrivão + 2 Investigadores</span>
+          </div>
+        </div>
+      </div>
+
+      <h3 style="font-size:.95rem; margin:1.4rem 0 .8rem;">Preferências (critério de desempate, não obrigatórias)</h3>
+
+      <div class="regra-card">
+        <div class="regra-numero preferencia">12</div>
+        <div>
+          <p class="regra-titulo">Agrupar por delegacia de origem<span class="regra-badge preferencia">Preferência</span></p>
+          <p class="regra-desc">Ao montar a equipe de Escrivão/Investigador (Extra Patos e Teixeira), o sistema tenta priorizar quem já é da mesma delegacia de origem de alguém que já ficou escalado naquele dia - já que essas pessoas costumam trabalhar juntas. Se não houver ninguém da mesma delegacia disponível, segue normalmente sem travar a geração.</p>
+        </div>
+      </div>
+
+      <div class="regra-card">
+        <div class="regra-numero preferencia">13</div>
+        <div>
+          <p class="regra-titulo">Priorizar um investigador disposto na equipe<span class="regra-badge preferencia">Preferência</span></p>
+          <p class="regra-desc">Ao preencher as vagas de investigador (Extra Patos e Teixeira), se a equipe daquele dia ainda não tem ninguém novato ou disposto, o sistema já tenta escolher um investigador marcado como "Disposto" primeiro - antes mesmo de checar a regra obrigatória no final. Isso reduz a chance de sobrar aviso de "sem novato/disposto" no dia.</p>
+        </div>
+      </div>
+
+      <div class="regra-card">
+        <div class="regra-numero preferencia">14</div>
+        <div>
+          <p class="regra-titulo">Rotação justa (menos usado recentemente primeiro)<span class="regra-badge preferencia">Preferência</span></p>
+          <p class="regra-desc">Entre os candidatos elegíveis para uma vaga, o sistema prioriza quem está há mais tempo sem plantão, para distribuir a carga de forma equilibrada ao longo do mês.</p>
+        </div>
+      </div>
+    </div>
+
+    <div id="tab-content-gerar-escala" class="tab-content hidden">
+      <div class="panel" style="margin-bottom:1.2rem;">
+        <div style="display:flex; align-items:flex-end; gap:1rem; flex-wrap:wrap;">
+          <div class="field" style="margin:0; min-width:140px;">
+            <label>Mês</label>
+            <select id="ge-mes">
+              <option value="1">Janeiro</option><option value="2">Fevereiro</option><option value="3">Março</option>
+              <option value="4">Abril</option><option value="5">Maio</option><option value="6">Junho</option>
+              <option value="7">Julho</option><option value="8">Agosto</option><option value="9">Setembro</option>
+              <option value="10">Outubro</option><option value="11">Novembro</option><option value="12">Dezembro</option>
+            </select>
+          </div>
+          <div class="field" style="margin:0; min-width:110px;">
+            <label>Ano</label>
+            <input type="number" id="ge-ano" value="2026" min="2025" max="2030">
+          </div>
+          <button class="btn-ghost" id="btn-ver-feriados" style="width:auto;">Ver feriados do mês</button>
+          <button class="btn-gold" id="btn-gerar-escala" style="width:auto;">Gerar Escala</button>
+          <button class="btn-ghost hidden" id="btn-exportar-pdf" style="width:auto;">Exportar PDF</button>
+        </div>
+      </div>
+
+      <div class="panel hidden" id="ge-feriados-panel" style="margin-bottom:1.2rem;">
+        <h3 style="margin-top:0; font-size:1rem;">Feriados do mês</h3>
+        <div id="ge-feriados-lista"></div>
+        <div class="grid-2" style="margin-top:1rem;">
+          <input type="date" id="ge-feriado-data">
+          <input type="text" id="ge-feriado-nome" placeholder="Nome do feriado (ex: Nossa Senhora das Neves)">
+        </div>
+        <div style="display:flex; align-items:center; gap:.8rem; margin-top:.6rem;">
+          <select id="ge-feriado-tipo" style="width:auto;">
+            <option value="estadual">Estadual</option>
+            <option value="municipal">Municipal</option>
+          </select>
+          <div class="checkbox-row" style="margin:0;">
+            <input type="checkbox" id="ge-feriado-teixeira"><label for="ge-feriado-teixeira">Tem plantão em Teixeira</label>
+          </div>
+          <button class="btn-ghost btn-sm" id="btn-add-feriado" type="button">+ Adicionar feriado</button>
+        </div>
+      </div>
+
+      <div id="ge-avisos-panel" class="panel hidden" style="margin-bottom:1.2rem; border-color:var(--danger);"></div>
+
+      <div class="panel" id="ge-resultado-panel"></div>
+    </div>
+
+    <div id="tab-content-escalas-geradas" class="tab-content hidden">
+      <div class="panel">
+        <table>
+          <thead><tr><th>Mês/Ano</th><th>Gerado em</th><th></th></tr></thead>
+          <tbody id="eg-historico-tbody"></tbody>
+        </table>
+        <div id="eg-historico-empty" class="empty-state hidden">Nenhuma escala gerada ainda.</div>
+      </div>
+      <div class="panel hidden" id="eg-detalhe-panel" style="margin-top:1.2rem;">
+        <div style="display:flex; justify-content:flex-end; margin-bottom:.8rem;">
+          <button class="btn-ghost" id="btn-exportar-pdf-historico" style="width:auto;">Exportar PDF</button>
+        </div>
+        <div id="eg-detalhe-conteudo"></div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<div id="modal-servidor" class="modal-overlay hidden">
+  <div class="modal">
+    <h2 id="modal-title">Novo Servidor</h2>
+
+    <div class="field">
+      <label>Nome completo</label>
+      <input type="text" id="f-nome" placeholder="Ex: João Victor Souza">
+    </div>
+
+    <div class="grid-2">
+      <div class="field">
+        <label>Cargo</label>
+        <select id="f-cargo">
+          <option value="investigador">Investigador</option>
+          <option value="escrivao">Escrivão</option>
+          <option value="delegado">Delegado</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Sexo</label>
+        <select id="f-sexo">
+          <option value="M">Masculino</option>
+          <option value="F">Feminino</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="section-title">Atributos</div>
+    <div class="field">
+      <label>Viatura padrão (opcional - usada como sugestão ao gerar escala, se for delegado)</label>
+      <input type="text" id="f-viatura" placeholder="Ex: VTR 1ªDD">
+    </div>
+    <div class="field">
+      <label>Delegacia de origem (opcional - o motor tenta escalar junto quem é da mesma)</label>
+      <select id="f-delegacia">
+        <option value="">— nenhuma —</option>
+        <option value="DHE">DHE</option>
+        <option value="DRF">DRF</option>
+        <option value="DEAM">DEAM</option>
+        <option value="Santa Luzia">Santa Luzia</option>
+        <option value="Malta">Malta</option>
+        <option value="Teixeira">Teixeira</option>
+        <option value="São Mamede">São Mamede</option>
+        <option value="1ª DD">1ª DD</option>
+        <option value="2ª DD">2ª DD</option>
+      </select>
+    </div>
+    <div class="checkbox-row"><input type="checkbox" id="f-dirige"><label for="f-dirige">Sabe dirigir</label></div>
+    <div class="checkbox-row"><input type="checkbox" id="f-novato"><label for="f-novato">Novato</label></div>
+    <div class="checkbox-row"><input type="checkbox" id="f-disposto"><label for="f-disposto">Disposto</label></div>
+    <div class="checkbox-row"><input type="checkbox" id="f-ordinario"><label for="f-ordinario">Disponível para Ordinário 24/72 (Patos)</label></div>
+    <div class="checkbox-row"><input type="checkbox" id="f-secust"><label for="f-secust">Disponível para SECUST (exclusivo)</label></div>
+
+    <div class="section-title">Polos permitidos</div>
+    <div class="checkbox-row"><input type="checkbox" id="f-polo-patos-semana" checked><label for="f-polo-patos-semana">Patos - dia de semana</label></div>
+    <div class="checkbox-row"><input type="checkbox" id="f-polo-patos-fds" checked><label for="f-polo-patos-fds">Patos - fim de semana</label></div>
+    <div class="checkbox-row"><input type="checkbox" id="f-polo-teixeira-fds"><label for="f-polo-teixeira-fds">Teixeira - fim de semana / feriados</label></div>
+
+    <div class="section-title">Incompatibilidades (não podem estar no mesmo plantão)</div>
+    <div class="incompat-list" id="f-incompatibilidades"></div>
+
+    <div class="section-title">Férias / afastamentos</div>
+    <div id="f-ferias-list"></div>
+    <div class="grid-2" style="margin-top:.5rem;">
+      <div class="field" style="margin-bottom:.5rem;">
+        <label>Início</label>
+        <input type="date" id="f-ferias-inicio">
+      </div>
+      <div class="field" style="margin-bottom:.5rem;">
+        <label>Fim</label>
+        <input type="date" id="f-ferias-fim">
+      </div>
+    </div>
+    <button class="btn-ghost btn-sm" id="btn-add-ferias" type="button">+ Adicionar período</button>
+    <p style="font-size:.75rem; color:var(--text-muted); margin-top:.3rem;" id="ferias-hint">Salve o servidor primeiro para poder adicionar férias.</p>
+
+    <div class="field" style="margin-top:1.2rem;">
+      <label>Observações</label>
+      <textarea id="f-observacoes" rows="2" placeholder="Opcional"></textarea>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-ghost" id="btn-cancelar-modal">Cancelar</button>
+      <button class="btn-primary" id="btn-salvar-servidor" style="width:auto;">Salvar</button>
+    </div>
+  </div>
 </div>
 
 <script>
-/* ================== CONFIGURAÇÃO (preencher antes de publicar) ================== */
-const CONFIG = {
-  SUPABASE_URL: "https://SEU-PROJETO.supabase.co",       // TODO: preencher
-  SUPABASE_ANON_KEY: "SUA_CHAVE_ANONIMA_SUPABASE",         // TODO: preencher
-  SUPABASE_BUCKET: "pop-midias",
-  EMAILJS_PUBLIC_KEY: "SUA_PUBLIC_KEY_EMAILJS",            // TODO: preencher
-  EMAILJS_SERVICE_ID: "SEU_SERVICE_ID",                    // TODO: preencher
-  EMAILJS_TEMPLATE_ID: "SEU_TEMPLATE_ID",                  // TODO: preencher
-  EMAIL_DESTINO: "15dspc.ascom@gmail.com",
-  // Hash bcrypt da senha compartilhada da delegacia.
-  // Senha padrão inicial: PopDSPC2026!  (troque assim que publicar — veja instruções no SETUP.md)
-  SENHA_HASH: "$2b$10$ZLP6/Sr6it0vyqjotg.krOim34ZZoGKUmWooimjk4TYjCX6ZvSi5y"
-};
+// ===================== CONFIGURAÇÃO SUPABASE =====================
+// Substitua pelos dados do SEU projeto Supabase (Settings > API)
+const SUPABASE_URL = 'https://ponktogsjsogoclfpzen.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBvbmt0b2dzanNvZ29jbGZwemVuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUyNTcxMTcsImV4cCI6MjEwMDgzMzExN30.NZMnfIAgVS0OPoUFTyeFaNMrBuutJFBbxzx92jczAME';
+const supa = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-const supabaseClient = window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
-if (window.emailjs) emailjs.init({ publicKey: CONFIG.EMAILJS_PUBLIC_KEY });
+// ===================== ESTADO =====================
+let currentUser = null;
+let servidoresCache = [];
+let editandoServidorId = null;
+let feriasTemp = []; // usado ao criar servidor novo (antes de ter id)
+let ultimoResultadoEscala = null; // { escala, mes, ano } - último gerado nesta sessão
+let ultimoItemHistorico = null; // item selecionado na aba Escalas Geradas
+let configDescanso = { patos: 48, ordinario: 72, secust: 48, teixeira: null }; // null = sem limite
+let configEstrito = { patos: true, ordinario: true, secust: true, teixeira: false };
 
-/* ================== ÁRVORE DE DECISÃO: TIPOS DE FATO ================== */
-const CAMPOS_COMUNS_RODAPE = ['delegacia_autuacao', 'responsavel_preenchimento'];
-
-// Lista de idades mais recorrentes (18 a 70) para os campos do tipo select_outro.
-// Quem não se encaixar aqui usa a opção "Outra idade", que abre um campo numérico.
-const IDADES_COMUNS = Array.from({length: 53}, (_, i) => String(18 + i));
-
-const VINCULOS_AUTOR = [
-  'Pai','Padrasto','Mãe','Madrasta','Avô/Avó','Tio/Tia','Primo/Prima','Irmão/Irmã',
-  'Padrinho/Madrinha','Cuidador(a) / Responsável','Companheiro(a) do pai ou da mãe',
-  'Namorado(a) ou ex-namorado(a) da vítima','Vizinho(a)','Conhecido(a) / amigo da família',
-  'Desconhecido'
-];
-
-const FATOS = {
-  repercussao: {
-    label: "Fato de Repercussão Geral / Relevância Policial",
-    desc: "Padroniza a coleta de dados críticos para o Delegado Seccional e para a Assessoria de Comunicação.",
-    fields: [
-      {id:'fato_natureza', label:'Fato / Natureza do fato', type:'text', required:true},
-      {id:'data_fato', label:'Data do fato', type:'date', required:true},
-      {id:'hora_fato', label:'Hora do fato', type:'time', required:true},
-      {id:'local_fato', label:'Local do fato (Rua, Bairro, Cidade)', type:'text', required:true},
-      {id:'ponto_referencia', label:'Ponto de referência do fato', type:'text'},
-      {id:'data_prisao', label:'Data da prisão / apreensão em flagrante', type:'date', required:true},
-      {id:'hora_prisao', label:'Hora da prisão / apreensão em flagrante', type:'time', required:true},
-      {id:'local_prisao', label:'Local da prisão / apreensão em flagrante', type:'text', required:true},
-      {id:'unidade_responsavel', label:'Unidade responsável', type:'text', required:true},
-      {id:'pessoas_preso', label:'Nomes, apelidos, idades e profissões do preso / investigado', type:'textarea', ajuda:'Informe um por linha'},
-      {id:'antecedentes_preso', label:'Antecedentes criminais do preso / investigado', type:'textarea'},
-      {id:'estado_civil_preso', label:'Estado civil / filhos do preso / investigado', type:'text'},
-      {id:'vinculo_faccao', label:'Vínculo com facções / grupos (se houver)', type:'text'},
-      {id:'pessoas_vitimas', label:'Nomes, apelidos, idades e profissão das vítimas', type:'textarea', ajuda:'Informe uma por linha'},
-      {id:'antecedentes_vitimas', label:'Antecedentes das vítimas (se houver)', type:'textarea'},
-      {id:'estado_civil_vitimas', label:'Estado civil / filhos das vítimas', type:'text'},
-      {id:'estado_saude_vitimas', label:'Estado de saúde / destino das vítimas', type:'textarea'},
-      {id:'objetos_subtraidos', label:'Objetos / valores subtraídos', type:'textarea'},
-      {id:'objetos_recuperados', label:'Objetos / valores recuperados', type:'textarea'},
-      {id:'armas', label:'Armas (tipo, calibre e numeração)', type:'textarea'},
-      {id:'drogas', label:'Drogas (tipo e peso aproximado)', type:'textarea'},
-      {id:'modus_operandi', label:'Modus operandi', type:'textarea', required:true},
-      {id:'pericias_requisitadas', label:'Perícias requisitadas', type:'textarea'},
-      {id:'pericias_realizadas', label:'Perícias realizadas', type:'textarea'},
-    ]
-  },
-  transito: {
-    label: "Acidente de Trânsito",
-    desc: "Campos sugeridos — ajuste conforme o padrão que vocês já usam no POP-ASCOM.",
-    placeholder: true,
-    fields: [
-      {id:'data_fato', label:'Data do fato', type:'date', required:true},
-      {id:'hora_fato', label:'Hora do fato', type:'time', required:true},
-      {id:'local_fato', label:'Local do fato (via, km, bairro)', type:'text', required:true},
-      {id:'tipo_acidente', label:'Tipo de acidente', type:'select', required:true, options:['Colisão','Atropelamento','Capotamento','Saída de pista','Outro']},
-      {id:'veiculos_envolvidos', label:'Veículos envolvidos', type:'textarea', ajuda:'Modelo, placa e condutor — um por linha'},
-      {id:'vitimas', label:'Vítimas', type:'textarea', ajuda:'Nome, idade, estado de saúde e destino'},
-      {id:'houve_obito', label:'Houve vítima fatal?', type:'select', options:['Não','Sim']},
-      {id:'dinamica_fato', label:'Dinâmica do acidente', type:'textarea', required:true},
-      {id:'pericias_requisitadas', label:'Perícias requisitadas', type:'textarea'},
-    ]
-  },
-  acidente_vitima: {
-    label: "Acidente com Vítima",
-    desc: "Campos sugeridos para acidentes não relacionados a trânsito (quedas, afogamentos etc.) — ajuste se necessário.",
-    placeholder: true,
-    fields: [
-      {id:'data_fato', label:'Data do fato', type:'date', required:true},
-      {id:'hora_fato', label:'Hora do fato', type:'time', required:true},
-      {id:'local_fato', label:'Local do fato', type:'text', required:true},
-      {id:'natureza_acidente', label:'Natureza do acidente', type:'text', required:true},
-      {id:'vitima_dados', label:'Nome e idade da vítima', type:'text', required:true},
-      {id:'estado_saude_destino', label:'Estado de saúde / destino da vítima', type:'textarea', required:true},
-      {id:'dinamica_fato', label:'Dinâmica do fato', type:'textarea', required:true},
-      {id:'pericias_requisitadas', label:'Perícias requisitadas', type:'textarea'},
-    ]
-  },
-  violencia_domestica: {
-    label: "Violência Doméstica",
-    desc: "Campos sugeridos — ajuste conforme o padrão que vocês já usam no POP-ASCOM.",
-    placeholder: true,
-    fields: [
-      {id:'data_fato', label:'Data do fato', type:'date', required:true},
-      {id:'hora_fato', label:'Hora do fato', type:'time', required:true},
-      {id:'local_fato', label:'Local do fato', type:'text', required:true},
-      {id:'vitima_dados', label:'Nome e idade da vítima', type:'text', required:true},
-      {id:'agressor_dados', label:'Nome, idade e vínculo do agressor com a vítima', type:'text', required:true},
-      {id:'medida_protetiva', label:'Medida protetiva solicitada?', type:'select', options:['Não','Sim']},
-      {id:'historico_violencia', label:'Histórico de violência anterior', type:'textarea'},
-      {id:'lesoes_estado_saude', label:'Lesões / estado de saúde da vítima', type:'textarea'},
-      {id:'encaminhamentos', label:'Encaminhamentos (IML, CRAS, casa-abrigo etc.)', type:'textarea'},
-    ]
-  },
-  abuso_sexual: {
-    label: "Abuso Sexual",
-    desc: "Campos sugeridos, com atenção ao sigilo no tratamento das informações — ajuste se necessário.",
-    placeholder: true,
-    fields: [
-      {id:'data_fato', label:'Data do fato', type:'date', required:true},
-      {id:'hora_fato', label:'Hora do fato', type:'time', required:true},
-      {id:'local_fato', label:'Local do fato', type:'text', required:true},
-      {id:'vitima_dados', label:'Nome e idade da vítima', type:'text', required:true},
-      {id:'autor_nome', label:'Nome do autor/investigado (se conhecido)', type:'text', required:true},
-      {id:'autor_idade', label:'Idade do autor/investigado', type:'select_outro', required:true,
-        options: IDADES_COMUNS, outroLabel: 'Outra idade', outroTipo: 'number', outroPlaceholder: 'Informe a idade exata'},
-      {id:'autor_vinculo', label:'Vínculo do autor/investigado com a vítima', type:'select_outro', required:true,
-        options: VINCULOS_AUTOR, outroLabel: 'Outro', outroTipo: 'text', outroPlaceholder: 'Especifique o vínculo'},
-      {id:'circunstancias_fato', label:'Circunstâncias do fato', type:'textarea', required:true},
-      {id:'providencias_adotadas', label:'Providências adotadas (exame IML, encaminhamento CREAS etc.)', type:'textarea'},
-    ]
-  }
-};
-
-/* ================== ESTADO ================== */
-let tipoSelecionado = null;
-
-/* ================== LOGIN ================== */
-function tentarLogin(){
-  const senha = document.getElementById('campo-senha').value;
-  const erroBox = document.getElementById('erro-login');
-  if(!senha){
-    erroBox.textContent = "Digite a senha de acesso.";
-    erroBox.classList.remove('oculto');
-    return;
-  }
-  const ok = window.dcodeIO ? dcodeIO.bcrypt.compareSync(senha, CONFIG.SENHA_HASH) : bcrypt.compareSync(senha, CONFIG.SENHA_HASH);
-  if(ok){
-    document.getElementById('tela-login').classList.add('oculto');
-    montarListaFatos();
-    document.getElementById('tela-escolha').classList.remove('oculto');
-  } else {
-    erroBox.textContent = "Senha incorreta. Confira com a Assessoria de Comunicação.";
-    erroBox.classList.remove('oculto');
-  }
-}
-document.getElementById('campo-senha').addEventListener('keydown', e => { if(e.key === 'Enter') tentarLogin(); });
-
-/* ================== ETAPA 1: ESCOLHA DO FATO ================== */
-function montarListaFatos(){
-  const lista = document.getElementById('lista-fatos');
-  lista.innerHTML = '';
-  Object.keys(FATOS).forEach(chave => {
-    const fato = FATOS[chave];
-    const div = document.createElement('div');
-    div.className = 'fato-opcao';
-    div.onclick = () => selecionarFato(chave);
-    div.innerHTML = `
-      <div class="marca"></div>
-      <div class="txt">
-        <strong>${fato.label}</strong>
-        <span>${fato.desc}</span>
-      </div>`;
-    lista.appendChild(div);
-  });
-}
-
-function selecionarFato(chave){
-  tipoSelecionado = chave;
-  const fato = FATOS[chave];
-  document.getElementById('form-tag').textContent = fato.placeholder ? 'Campos sugeridos' : 'Padrão confirmado';
-  document.getElementById('form-titulo').textContent = fato.label;
-  document.getElementById('form-descricao').textContent = fato.desc;
-
-  const container = document.getElementById('campos-dinamicos');
-  container.innerHTML = '';
-  fato.fields.forEach(campo => container.appendChild(criarCampo(campo)));
-
-  document.getElementById('erro-formulario').classList.add('oculto');
-  document.getElementById('tela-escolha').classList.add('oculto');
-  document.getElementById('tela-formulario').classList.remove('oculto');
-  window.scrollTo({top:0, behavior:'smooth'});
-}
-
-function voltarParaEscolha(){
-  document.getElementById('tela-formulario').classList.add('oculto');
-  document.getElementById('tela-escolha').classList.remove('oculto');
-}
-
-function criarCampo(campo){
-  const wrap = document.createElement('div');
-  const obrigatorio = campo.required ? '<span class="obr">*</span>' : '';
-  const ajuda = campo.ajuda ? `<span class="ajuda">${campo.ajuda}</span>` : '';
-  let inputHtml = '';
-
-  if(campo.type === 'textarea'){
-    inputHtml = `<textarea id="campo_${campo.id}" data-required="${!!campo.required}"></textarea>`;
-  } else if(campo.type === 'select'){
-    const opts = campo.options.map(o => `<option value="${o}">${o}</option>`).join('');
-    inputHtml = `<select id="campo_${campo.id}" data-required="${!!campo.required}"><option value="">Selecione</option>${opts}</select>`;
-  } else if(campo.type === 'select_outro'){
-    const opts = campo.options.map(o => `<option value="${o}">${o}</option>`).join('');
-    const outroLabel = campo.outroLabel || 'Outro';
-    inputHtml = `
-      <select id="campo_${campo.id}" data-required="${!!campo.required}" onchange="alternarOutro('${campo.id}')">
-        <option value="">Selecione</option>
-        ${opts}
-        <option value="__outro__">${outroLabel}</option>
-      </select>
-      <input type="${campo.outroTipo || 'text'}" id="campo_${campo.id}_outro" class="oculto"
-        placeholder="${campo.outroPlaceholder || 'Especifique'}" style="margin-top:8px;">
-    `;
-  } else {
-    inputHtml = `<input type="${campo.type}" id="campo_${campo.id}" data-required="${!!campo.required}">`;
-  }
-
-  wrap.innerHTML = `<label for="campo_${campo.id}">${campo.label}${obrigatorio}${ajuda}</label>${inputHtml}`;
-  return wrap;
-}
-
-function alternarOutro(campoId){
-  const select = document.getElementById(`campo_${campoId}`);
-  const outroInput = document.getElementById(`campo_${campoId}_outro`);
-  if(select.value === '__outro__'){
-    outroInput.classList.remove('oculto');
-    outroInput.focus();
-  } else {
-    outroInput.classList.add('oculto');
-    outroInput.value = '';
-  }
-}
-
-// Lê o valor de um campo, tratando o caso especial do select_outro
-// (usa o valor digitado no campo "Outro" quando essa opção é selecionada).
-function obterValorCampo(campo){
-  if(campo.type === 'select_outro'){
-    const selecionado = document.getElementById(`campo_${campo.id}`).value;
-    if(selecionado === '__outro__'){
-      return document.getElementById(`campo_${campo.id}_outro`).value.trim();
-    }
-    return selecionado;
-  }
-  return document.getElementById(`campo_${campo.id}`).value.trim();
-}
-
-/* ================== ENVIO ================== */
-async function enviarRegistro(){
-  const fato = FATOS[tipoSelecionado];
-  const erroBox = document.getElementById('erro-formulario');
-  erroBox.classList.add('oculto');
-
-  const dados = {};
-  let faltando = [];
-
-  fato.fields.forEach(campo => {
-    const valor = obterValorCampo(campo);
-    if(campo.required && !valor) faltando.push(campo.label);
-    dados[campo.id] = valor;
-  });
-
-  const delegacia = document.getElementById('campo-delegacia').value.trim();
-  const responsavel = document.getElementById('campo-responsavel').value.trim();
-  if(!delegacia) faltando.push('Delegacia de autuação');
-  if(!responsavel) faltando.push('Responsável pelo preenchimento');
-
-  if(faltando.length){
-    erroBox.textContent = 'Preencha os campos obrigatórios: ' + faltando.join(', ') + '.';
-    erroBox.classList.remove('oculto');
-    return;
-  }
-
-  const btn = document.getElementById('btn-enviar');
-  btn.disabled = true;
-  btn.textContent = 'Enviando...';
-
-  try{
-    let midiaUrl = null;
-    const arquivo = document.getElementById('campo-midia').files[0];
-    if(arquivo){
-      const nomeArquivo = `${Date.now()}_${arquivo.name}`.replace(/\s+/g,'_');
-      const { error: erroUpload } = await supabaseClient.storage
-        .from(CONFIG.SUPABASE_BUCKET)
-        .upload(nomeArquivo, arquivo);
-      if(erroUpload) throw new Error('Falha ao enviar arquivo: ' + erroUpload.message);
-      const { data: urlData } = supabaseClient.storage.from(CONFIG.SUPABASE_BUCKET).getPublicUrl(nomeArquivo);
-      midiaUrl = urlData.publicUrl;
-    }
-
-    const registro = {
-      tipo_fato: tipoSelecionado,
-      tipo_fato_label: fato.label,
-      dados: dados,
-      delegacia_autuacao: delegacia,
-      responsavel_preenchimento: responsavel,
-      midia_url: midiaUrl
+async function carregarConfiguracoes(){
+  const { data } = await supa.from('config_sistema').select('*').eq('id', 1).single();
+  if (data){
+    configDescanso = {
+      patos: data.horas_patos,
+      ordinario: data.horas_ordinario,
+      secust: data.horas_secust,
+      teixeira: data.horas_teixeira
     };
-
-    const { error: erroInsert } = await supabaseClient.from('pop_fatos').insert(registro);
-    if(erroInsert) throw new Error('Falha ao salvar registro: ' + erroInsert.message);
-
-    await notificarPorEmail(fato, dados, delegacia, responsavel, midiaUrl);
-
-    document.getElementById('tela-formulario').classList.add('oculto');
-    document.getElementById('tela-sucesso').classList.remove('oculto');
-    window.scrollTo({top:0, behavior:'smooth'});
-  } catch(e){
-    erroBox.textContent = e.message || 'Não foi possível enviar o registro. Tente novamente.';
-    erroBox.classList.remove('oculto');
-  } finally {
-    btn.disabled = false;
-    btn.textContent = 'Enviar registro';
+    configEstrito = {
+      patos: data.estrito_patos,
+      ordinario: data.estrito_ordinario,
+      secust: data.estrito_secust,
+      teixeira: data.estrito_teixeira
+    };
   }
 }
 
-async function notificarPorEmail(fato, dados, delegacia, responsavel, midiaUrl){
-  if(!window.emailjs) return;
-  const resumo = Object.keys(dados)
-    .filter(k => dados[k])
-    .map(k => `${k}: ${dados[k]}`)
-    .join('\n');
+// ===================== AUTENTICAÇÃO =====================
+async function checkSession(){
+  const { data: { session } } = await supa.auth.getSession();
+  if (session){
+    currentUser = session.user;
+    mostrarApp();
+  } else {
+    mostrarLogin();
+  }
+}
 
-  const params = {
-    tipo_fato: fato.label,
-    delegacia_autuacao: delegacia,
-    responsavel_preenchimento: responsavel,
-    resumo: resumo,
-    midia_url: midiaUrl || 'Nenhum arquivo enviado',
-    data_envio: new Date().toLocaleString('pt-BR'),
-    email_destino: CONFIG.EMAIL_DESTINO
+function mostrarLogin(){
+  document.getElementById('login-screen').classList.remove('hidden');
+  document.getElementById('app-screen').classList.add('hidden');
+}
+
+function mostrarApp(){
+  document.getElementById('login-screen').classList.add('hidden');
+  document.getElementById('app-screen').classList.remove('hidden');
+  document.getElementById('user-email').textContent = currentUser.email;
+  carregarServidores();
+  carregarConfiguracoes();
+}
+
+document.getElementById('btn-login').addEventListener('click', async () => {
+  const email = document.getElementById('login-email').value.trim();
+  const senha = document.getElementById('login-senha').value;
+  const errEl = document.getElementById('login-error');
+  const btn = document.getElementById('btn-login');
+  errEl.textContent = '';
+
+  if (!email || !senha){
+    errEl.textContent = 'Preencha e-mail e senha.';
+    return;
+  }
+
+  const textoOriginal = btn.textContent;
+  btn.textContent = 'Entrando...';
+  btn.disabled = true;
+  btn.style.opacity = '0.7';
+
+  const { data, error } = await supa.auth.signInWithPassword({ email, password: senha });
+
+  btn.textContent = textoOriginal;
+  btn.disabled = false;
+  btn.style.opacity = '1';
+
+  if (error){
+    errEl.textContent = 'E-mail ou senha inválidos.';
+    return;
+  }
+  currentUser = data.user;
+  mostrarApp();
+});
+
+document.getElementById('btn-logout').addEventListener('click', async () => {
+  await supa.auth.signOut();
+  currentUser = null;
+  mostrarLogin();
+});
+
+// ===================== CARREGAR SERVIDORES =====================
+async function carregarServidores(){
+  const { data, error } = await supa
+    .from('servidores')
+    .select('*')
+    .order('nome', { ascending: true });
+
+  if (error){
+    mostrarToast('Erro ao carregar servidores: ' + error.message, true);
+    return;
+  }
+  servidoresCache = data || [];
+  renderTabela();
+}
+
+function renderTabela(){
+  const tbody = document.getElementById('servidores-tbody');
+  const emptyEl = document.getElementById('servidores-empty');
+  const countEl = document.getElementById('servidores-count');
+  tbody.innerHTML = '';
+
+  const filtro = document.getElementById('filtro-cargo').value;
+  const lista = filtro === 'todos' ? servidoresCache : servidoresCache.filter(s => s.cargo === filtro);
+
+  countEl.textContent = lista.length + ' de ' + servidoresCache.length + ' servidor(es)';
+
+  if (lista.length === 0){
+    emptyEl.classList.remove('hidden');
+    emptyEl.textContent = servidoresCache.length === 0
+      ? 'Nenhum servidor cadastrado ainda. Clique em "Novo Servidor" para começar.'
+      : 'Nenhum servidor encontrado para esse filtro.';
+    return;
+  }
+  emptyEl.classList.add('hidden');
+
+  lista.forEach(s => {
+    const tr = document.createElement('tr');
+
+    const atributos = [];
+    if (s.dirige) atributos.push('<span class="tag on">Dirige</span>');
+    if (s.novato) atributos.push('<span class="tag on">Novato</span>');
+    if (s.disposto) atributos.push('<span class="tag on">Disposto</span>');
+    if (s.disponivel_ordinario) atributos.push('<span class="tag on">Ordinário</span>');
+    if (s.disponivel_secust) atributos.push('<span class="tag on">SECUST</span>');
+    if (atributos.length === 0) atributos.push('<span class="tag">-</span>');
+
+    const polos = [];
+    if (s.polo_patos_semana) polos.push('<span class="tag on">Patos sem.</span>');
+    if (s.polo_patos_fds) polos.push('<span class="tag on">Patos fds</span>');
+    if (s.polo_teixeira_fds) polos.push('<span class="tag on">Teixeira</span>');
+    if (polos.length === 0) polos.push('<span class="tag">-</span>');
+
+    tr.innerHTML = `
+      <td><strong>${escapeHtml(s.nome)}</strong></td>
+      <td><span class="pill-cargo pill-${s.cargo}">${labelCargo(s.cargo)}</span></td>
+      <td>${s.sexo}</td>
+      <td>${atributos.join('')}</td>
+      <td>${polos.join('')}</td>
+      <td>${s.ativo ? '<span class="tag on">Ativo</span>' : '<span class="tag">Inativo</span>'}</td>
+      <td style="white-space:nowrap;">
+        <button class="btn-ghost btn-sm" data-edit="${s.id}">Editar</button>
+        <button class="btn-danger btn-sm" data-del="${s.id}">Excluir</button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  tbody.querySelectorAll('[data-edit]').forEach(btn => {
+    btn.addEventListener('click', () => abrirModalEdicao(btn.dataset.edit));
+  });
+  tbody.querySelectorAll('[data-del]').forEach(btn => {
+    btn.addEventListener('click', () => excluirServidor(btn.dataset.del));
+  });
+}
+
+function labelCargo(c){
+  return { escrivao: 'Escrivão', investigador: 'Investigador', delegado: 'Delegado' }[c] || c;
+}
+
+function escapeHtml(str){
+  const d = document.createElement('div');
+  d.textContent = str;
+  return d.innerHTML;
+}
+
+document.getElementById('filtro-cargo').addEventListener('change', renderTabela);
+
+// ===================== MODAL: NOVO / EDITAR =====================
+document.getElementById('btn-novo-servidor').addEventListener('click', () => abrirModalNovo());
+document.getElementById('btn-cancelar-modal').addEventListener('click', fecharModal);
+
+function abrirModalNovo(){
+  editandoServidorId = null;
+  feriasTemp = [];
+  document.getElementById('modal-title').textContent = 'Novo Servidor';
+  document.getElementById('f-nome').value = '';
+  document.getElementById('f-viatura').value = '';
+  document.getElementById('f-delegacia').value = '';
+  document.getElementById('f-cargo').value = 'investigador';
+  document.getElementById('f-sexo').value = 'M';
+  document.getElementById('f-dirige').checked = false;
+  document.getElementById('f-novato').checked = false;
+  document.getElementById('f-disposto').checked = false;
+  document.getElementById('f-ordinario').checked = false;
+  document.getElementById('f-secust').checked = false;
+  document.getElementById('f-polo-patos-semana').checked = true;
+  document.getElementById('f-polo-patos-fds').checked = true;
+  document.getElementById('f-polo-teixeira-fds').checked = false;
+  document.getElementById('f-observacoes').value = '';
+  document.getElementById('ferias-hint').classList.remove('hidden');
+  renderFeriasList([]);
+  renderIncompatibilidadesList(null, []);
+  document.getElementById('modal-servidor').classList.remove('hidden');
+}
+
+async function abrirModalEdicao(id){
+  const s = servidoresCache.find(x => x.id === id);
+  if (!s) return;
+  editandoServidorId = id;
+  document.getElementById('modal-title').textContent = 'Editar Servidor';
+  document.getElementById('f-nome').value = s.nome;
+  document.getElementById('f-viatura').value = s.viatura_padrao || '';
+  document.getElementById('f-delegacia').value = s.delegacia || '';
+  document.getElementById('f-cargo').value = s.cargo;
+  document.getElementById('f-sexo').value = s.sexo;
+  document.getElementById('f-dirige').checked = s.dirige;
+  document.getElementById('f-novato').checked = s.novato;
+  document.getElementById('f-disposto').checked = s.disposto;
+  document.getElementById('f-ordinario').checked = s.disponivel_ordinario;
+  document.getElementById('f-secust').checked = s.disponivel_secust;
+  document.getElementById('f-polo-patos-semana').checked = s.polo_patos_semana;
+  document.getElementById('f-polo-patos-fds').checked = s.polo_patos_fds;
+  document.getElementById('f-polo-teixeira-fds').checked = s.polo_teixeira_fds;
+  document.getElementById('f-observacoes').value = s.observacoes || '';
+  document.getElementById('ferias-hint').classList.add('hidden');
+
+  const { data: ferias } = await supa.from('ferias').select('*').eq('servidor_id', id).order('data_inicio');
+  renderFeriasList(ferias || []);
+
+  const { data: incompats } = await supa
+    .from('incompatibilidades')
+    .select('*')
+    .or(`servidor_id_1.eq.${id},servidor_id_2.eq.${id}`);
+  const idsIncompat = (incompats || []).map(i => i.servidor_id_1 === id ? i.servidor_id_2 : i.servidor_id_1);
+  renderIncompatibilidadesList(id, idsIncompat);
+
+  document.getElementById('modal-servidor').classList.remove('hidden');
+}
+
+function fecharModal(){
+  document.getElementById('modal-servidor').classList.add('hidden');
+}
+
+function renderIncompatibilidadesList(currentId, selectedIds){
+  const container = document.getElementById('f-incompatibilidades');
+  const outros = servidoresCache.filter(s => s.id !== currentId);
+  if (outros.length === 0){
+    container.innerHTML = '<span style="color:var(--text-muted); font-size:.8rem;">Cadastre outros servidores primeiro.</span>';
+    return;
+  }
+  container.innerHTML = outros.map(s => `
+    <div class="checkbox-row">
+      <input type="checkbox" class="incompat-check" value="${s.id}" ${selectedIds.includes(s.id) ? 'checked' : ''}>
+      <label>${escapeHtml(s.nome)}</label>
+    </div>
+  `).join('');
+}
+
+function renderFeriasList(lista){
+  const container = document.getElementById('f-ferias-list');
+  feriasTemp = lista;
+  if (lista.length === 0){
+    container.innerHTML = '<p style="font-size:.8rem; color:var(--text-muted);">Nenhum período cadastrado.</p>';
+    return;
+  }
+  container.innerHTML = lista.map((f, idx) => `
+    <div class="ferias-item">
+      <span>${formatarData(f.data_inicio)} até ${formatarData(f.data_fim)}</span>
+      <button class="btn-danger btn-sm" data-ferias-del="${f.id || idx}" type="button">Remover</button>
+    </div>
+  `).join('');
+
+  container.querySelectorAll('[data-ferias-del]').forEach(btn => {
+    btn.addEventListener('click', () => removerFerias(btn.dataset.feriasDel));
+  });
+}
+
+function formatarData(iso){
+  const [ano, mes, dia] = iso.split('-');
+  return `${dia}/${mes}/${ano}`;
+}
+
+document.getElementById('btn-add-ferias').addEventListener('click', async () => {
+  const inicio = document.getElementById('f-ferias-inicio').value;
+  const fim = document.getElementById('f-ferias-fim').value;
+  if (!inicio || !fim){
+    mostrarToast('Preencha início e fim do período.', true);
+    return;
+  }
+  if (fim < inicio){
+    mostrarToast('A data de fim não pode ser antes do início.', true);
+    return;
+  }
+  if (!editandoServidorId){
+    mostrarToast('Salve o servidor antes de adicionar férias.', true);
+    return;
+  }
+  const { data, error } = await supa.from('ferias').insert({
+    servidor_id: editandoServidorId,
+    data_inicio: inicio,
+    data_fim: fim
+  }).select();
+  if (error){
+    mostrarToast('Erro ao adicionar férias: ' + error.message, true);
+    return;
+  }
+  feriasTemp.push(data[0]);
+  renderFeriasList(feriasTemp);
+  document.getElementById('f-ferias-inicio').value = '';
+  document.getElementById('f-ferias-fim').value = '';
+});
+
+async function removerFerias(id){
+  await supa.from('ferias').delete().eq('id', id);
+  feriasTemp = feriasTemp.filter(f => String(f.id) !== String(id));
+  renderFeriasList(feriasTemp);
+}
+
+// ===================== SALVAR SERVIDOR =====================
+document.getElementById('btn-salvar-servidor').addEventListener('click', async () => {
+  const nome = document.getElementById('f-nome').value.trim();
+  if (!nome){
+    mostrarToast('Informe o nome do servidor.', true);
+    return;
+  }
+
+  const payload = {
+    nome,
+    viatura_padrao: document.getElementById('f-viatura').value.trim() || null,
+    delegacia: document.getElementById('f-delegacia').value.trim() || null,
+    cargo: document.getElementById('f-cargo').value,
+    sexo: document.getElementById('f-sexo').value,
+    dirige: document.getElementById('f-dirige').checked,
+    novato: document.getElementById('f-novato').checked,
+    disposto: document.getElementById('f-disposto').checked,
+    disponivel_ordinario: document.getElementById('f-ordinario').checked,
+    disponivel_secust: document.getElementById('f-secust').checked,
+    polo_patos_semana: document.getElementById('f-polo-patos-semana').checked,
+    polo_patos_fds: document.getElementById('f-polo-patos-fds').checked,
+    polo_teixeira_fds: document.getElementById('f-polo-teixeira-fds').checked,
+    observacoes: document.getElementById('f-observacoes').value.trim() || null
   };
 
+  let servidorId = editandoServidorId;
+
+  if (editandoServidorId){
+    const { error } = await supa.from('servidores').update(payload).eq('id', editandoServidorId);
+    if (error){ mostrarToast('Erro ao salvar: ' + error.message, true); return; }
+  } else {
+    const { data, error } = await supa.from('servidores').insert(payload).select();
+    if (error){ mostrarToast('Erro ao salvar: ' + error.message, true); return; }
+    servidorId = data[0].id;
+  }
+
+  // Salvar incompatibilidades (apaga as antigas envolvendo este servidor e recria)
+  const checks = document.querySelectorAll('.incompat-check:checked');
+  const novosPares = Array.from(checks).map(c => c.value);
+
+  await supa.from('incompatibilidades')
+    .delete()
+    .or(`servidor_id_1.eq.${servidorId},servidor_id_2.eq.${servidorId}`);
+
+  if (novosPares.length > 0){
+    const linhas = novosPares.map(outroId => {
+      const [id1, id2] = [servidorId, outroId].sort();
+      return { servidor_id_1: id1, servidor_id_2: id2 };
+    });
+    await supa.from('incompatibilidades').upsert(linhas, { onConflict: 'servidor_id_1,servidor_id_2' });
+  }
+
+  mostrarToast(editandoServidorId ? 'Servidor atualizado.' : 'Servidor cadastrado.');
+  fecharModal();
+  await carregarServidores();
+});
+
+async function excluirServidor(id){
+  if (!confirm('Tem certeza que deseja excluir este servidor? Essa ação não pode ser desfeita.')) return;
+  const { error } = await supa.from('servidores').delete().eq('id', id);
+  if (error){ mostrarToast('Erro ao excluir: ' + error.message, true); return; }
+  mostrarToast('Servidor excluído.');
+  carregarServidores();
+}
+
+// ===================== NAVEGAÇÃO POR ABAS =====================
+const TITULOS_ABA = {
+  'servidores': 'Cadastro de Servidores',
+  'feriados': 'Feriados e Eventos com Plantão',
+  'regras': 'Regras da Escala',
+  'gerar-escala': 'Gerar Escala Mensal',
+  'escalas-geradas': 'Escalas Geradas'
+};
+
+document.querySelectorAll('.nav-item[data-tab]').forEach(item => {
+  item.addEventListener('click', () => {
+    const tab = item.dataset.tab;
+    document.querySelectorAll('.nav-item[data-tab]').forEach(i => i.classList.remove('active'));
+    item.classList.add('active');
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
+    document.getElementById('tab-content-' + tab).classList.remove('hidden');
+    document.getElementById('topbar-title').textContent = TITULOS_ABA[tab];
+    if (tab === 'escalas-geradas') carregarHistoricoEscalas();
+    if (tab === 'feriados') carregarFeriadosDoAno();
+    if (tab === 'regras'){
+      document.getElementById('regras-horas-patos').value = String(configDescanso.patos);
+      document.getElementById('regras-horas-ordinario').value = configDescanso.ordinario === null ? '' : String(configDescanso.ordinario);
+      document.getElementById('regras-horas-secust').value = configDescanso.secust === null ? '' : String(configDescanso.secust);
+      document.getElementById('regras-horas-teixeira').value = configDescanso.teixeira === null ? '' : String(configDescanso.teixeira);
+      document.getElementById('regras-estrito-patos').checked = configEstrito.patos;
+      document.getElementById('regras-estrito-ordinario').checked = configEstrito.ordinario;
+      document.getElementById('regras-estrito-secust').checked = configEstrito.secust;
+      document.getElementById('regras-estrito-teixeira').checked = configEstrito.teixeira;
+    }
+  });
+});
+
+// ===================== MÊS/ANO PADRÃO (mês seguinte ao atual) =====================
+(function preselecionarMesSeguinte(){
+  const hoje = new Date();
+  let mesSeguinte = hoje.getMonth() + 2; // getMonth() é 0-indexado; +1 é o mês atual, +2 é o seguinte
+  let anoSeguinte = hoje.getFullYear();
+  if (mesSeguinte > 12){ mesSeguinte = 1; anoSeguinte += 1; }
+  document.getElementById('ge-mes').value = String(mesSeguinte);
+  document.getElementById('ge-ano').value = String(anoSeguinte);
+  document.getElementById('fer-ano').value = String(anoSeguinte);
+})();
+
+// ===================== FERIADOS =====================
+function mesAnoSelecionados(){
+  return {
+    mes: parseInt(document.getElementById('ge-mes').value, 10),
+    ano: parseInt(document.getElementById('ge-ano').value, 10)
+  };
+}
+
+async function buscarFeriadosNacionais(ano){
   try{
-    await emailjs.send(CONFIG.EMAILJS_SERVICE_ID, CONFIG.EMAILJS_TEMPLATE_ID, params);
+    const resp = await fetch(`https://brasilapi.com.br/api/feriados/v1/${ano}`);
+    if (!resp.ok) return [];
+    return await resp.json();
   } catch(e){
-    console.warn('Registro salvo, mas o e-mail de notificação falhou:', e);
+    return [];
   }
 }
 
-function reiniciarFormulario(){
-  document.getElementById('tela-sucesso').classList.add('oculto');
-  document.getElementById('campo-delegacia').value = '';
-  document.getElementById('campo-responsavel').value = '';
-  document.getElementById('campo-midia').value = '';
-  tipoSelecionado = null;
-  document.getElementById('tela-escolha').classList.remove('oculto');
-  window.scrollTo({top:0, behavior:'smooth'});
+async function garantirFeriadosDoMes(mes, ano){
+  const nacionais = await buscarFeriadosNacionais(ano);
+  const prefixo = `${ano}-${String(mes).padStart(2,'0')}`;
+  const doMes = nacionais.filter(f => f.date.startsWith(prefixo));
+  for (const f of doMes){
+    await supa.from('feriados').upsert(
+      { data: f.date, nome: f.name, tipo: 'nacional', teixeira_plantao: false },
+      { onConflict: 'data,nome', ignoreDuplicates: true }
+    );
+  }
+  const { data } = await supa.from('feriados')
+    .select('*')
+    .gte('data', `${prefixo}-01`)
+    .lte('data', `${prefixo}-31`)
+    .order('data');
+  return data || [];
 }
+
+document.getElementById('btn-ver-feriados').addEventListener('click', async () => {
+  const { mes, ano } = mesAnoSelecionados();
+  const painel = document.getElementById('ge-feriados-panel');
+  painel.classList.remove('hidden');
+  document.getElementById('ge-feriados-lista').innerHTML = '<p style="color:var(--text-muted); font-size:.85rem;">Carregando...</p>';
+  const feriados = await garantirFeriadosDoMes(mes, ano);
+  renderFeriadosLista(feriados);
+});
+
+function renderFeriadosLista(feriados){
+  const el = document.getElementById('ge-feriados-lista');
+  if (feriados.length === 0){
+    el.innerHTML = '<p style="color:var(--text-muted); font-size:.85rem;">Nenhum feriado encontrado para esse mês.</p>';
+    return;
+  }
+  el.innerHTML = feriados.map(f => `
+    <div class="checkbox-row" style="justify-content:space-between;">
+      <span>${formatarData(f.data)} — ${escapeHtml(f.nome)} <span class="tag">${f.tipo}</span></span>
+      <label style="display:flex; align-items:center; gap:.4rem; margin:0;">
+        <input type="checkbox" data-feriado-teixeira="${f.id}" ${f.teixeira_plantao ? 'checked' : ''}>
+        Plantão em Teixeira
+      </label>
+    </div>
+  `).join('');
+  el.querySelectorAll('[data-feriado-teixeira]').forEach(chk => {
+    chk.addEventListener('change', async () => {
+      await supa.from('feriados').update({ teixeira_plantao: chk.checked }).eq('id', chk.dataset.feriadoTeixeira);
+      mostrarToast('Feriado atualizado.');
+    });
+  });
+}
+
+document.getElementById('btn-add-feriado').addEventListener('click', async () => {
+  const data = document.getElementById('ge-feriado-data').value;
+  const nome = document.getElementById('ge-feriado-nome').value.trim();
+  const tipo = document.getElementById('ge-feriado-tipo').value;
+  const teixeira = document.getElementById('ge-feriado-teixeira').checked;
+  if (!data || !nome){
+    mostrarToast('Preencha data e nome do feriado.', true);
+    return;
+  }
+  const { error } = await supa.from('feriados').insert({ data, nome, tipo, teixeira_plantao: teixeira });
+  if (error){ mostrarToast('Erro ao adicionar feriado: ' + error.message, true); return; }
+  mostrarToast('Feriado adicionado.');
+  document.getElementById('ge-feriado-data').value = '';
+  document.getElementById('ge-feriado-nome').value = '';
+  document.getElementById('ge-feriado-teixeira').checked = false;
+  const { mes, ano } = mesAnoSelecionados();
+  const feriados = await garantirFeriadosDoMes(mes, ano);
+  renderFeriadosLista(feriados);
+});
+
+// ===================== ABA FERIADOS (gestão completa) =====================
+async function carregarFeriadosDoAno(){
+  const ano = document.getElementById('fer-ano').value;
+  const { data, error } = await supa.from('feriados')
+    .select('*')
+    .gte('data', `${ano}-01-01`)
+    .lte('data', `${ano}-12-31`)
+    .order('data');
+  if (error){ mostrarToast('Erro ao carregar feriados: ' + error.message, true); return; }
+  renderFeriadosTab(data || []);
+}
+
+function renderFeriadosTab(lista){
+  const tbody = document.getElementById('fer-tbody');
+  const emptyEl = document.getElementById('fer-empty');
+  if (lista.length === 0){
+    tbody.innerHTML = '';
+    emptyEl.classList.remove('hidden');
+    return;
+  }
+  emptyEl.classList.add('hidden');
+  tbody.innerHTML = lista.map(f => `
+    <tr>
+      <td>${formatarData(f.data)}</td>
+      <td>${escapeHtml(f.nome)}</td>
+      <td><span class="tag">${f.tipo}</span></td>
+      <td><input type="checkbox" data-fer-teixeira="${f.id}" ${f.teixeira_plantao ? 'checked' : ''}></td>
+      <td><button class="btn-danger btn-sm" data-fer-del="${f.id}">Excluir</button></td>
+    </tr>
+  `).join('');
+  tbody.querySelectorAll('[data-fer-teixeira]').forEach(chk => {
+    chk.addEventListener('change', async () => {
+      await supa.from('feriados').update({ teixeira_plantao: chk.checked }).eq('id', chk.dataset.ferTeixeira);
+      mostrarToast('Feriado atualizado.');
+    });
+  });
+  tbody.querySelectorAll('[data-fer-del]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      if (!confirm('Excluir esse feriado?')) return;
+      await supa.from('feriados').delete().eq('id', btn.dataset.ferDel);
+      carregarFeriadosDoAno();
+    });
+  });
+}
+
+document.getElementById('btn-carregar-feriados-ano').addEventListener('click', carregarFeriadosDoAno);
+
+document.getElementById('btn-salvar-horas-descanso').addEventListener('click', async () => {
+  const lerValor = id => {
+    const v = document.getElementById(id).value;
+    return v === '' ? null : parseInt(v, 10);
+  };
+  const novaConfig = {
+    horas_patos: lerValor('regras-horas-patos'),
+    horas_ordinario: lerValor('regras-horas-ordinario'),
+    horas_secust: lerValor('regras-horas-secust'),
+    horas_teixeira: lerValor('regras-horas-teixeira'),
+    estrito_patos: document.getElementById('regras-estrito-patos').checked,
+    estrito_ordinario: document.getElementById('regras-estrito-ordinario').checked,
+    estrito_secust: document.getElementById('regras-estrito-secust').checked,
+    estrito_teixeira: document.getElementById('regras-estrito-teixeira').checked
+  };
+  if (novaConfig.horas_patos === null){
+    mostrarToast('Patos precisa ter um intervalo definido (não pode ser "Sem limite").', true);
+    return;
+  }
+  const { error } = await supa.from('config_sistema').update({ ...novaConfig, updated_at: new Date().toISOString() }).eq('id', 1);
+  if (error){ mostrarToast('Erro ao salvar: ' + error.message, true); return; }
+  configDescanso = { patos: novaConfig.horas_patos, ordinario: novaConfig.horas_ordinario, secust: novaConfig.horas_secust, teixeira: novaConfig.horas_teixeira };
+  configEstrito = { patos: novaConfig.estrito_patos, ordinario: novaConfig.estrito_ordinario, secust: novaConfig.estrito_secust, teixeira: novaConfig.estrito_teixeira };
+  mostrarToast('Configuração de descanso atualizada. Vale a partir da próxima escala gerada.');
+});
+
+document.getElementById('btn-add-feriado-tab').addEventListener('click', async () => {
+  const data = document.getElementById('fer-data').value;
+  const nome = document.getElementById('fer-nome').value.trim();
+  const tipo = document.getElementById('fer-tipo').value;
+  const teixeira = document.getElementById('fer-teixeira').checked;
+  if (!data || !nome){
+    mostrarToast('Preencha data e nome do feriado.', true);
+    return;
+  }
+  const { error } = await supa.from('feriados').insert({ data, nome, tipo, teixeira_plantao: teixeira });
+  if (error){ mostrarToast('Erro ao adicionar: ' + error.message, true); return; }
+  mostrarToast('Feriado adicionado.');
+  document.getElementById('fer-data').value = '';
+  document.getElementById('fer-nome').value = '';
+  document.getElementById('fer-teixeira').checked = false;
+  carregarFeriadosDoAno();
+});
+
+// ===================== MOTOR DE GERAÇÃO DE ESCALA =====================
+// Observação de regras aplicadas:
+// - Dia útil: 1 delegado + 1 escrivão + 3 investigadores (1 pode ser o Ordinário) em Patos
+// - Fim de semana: 1 delegado + 2 escrivães + 2 investigadores em Patos
+// - Ordinário 24/72 (Patos): 1 investigador/dia, só quem tem a flag, rotação por menos usado recentemente
+// - SECUST: 1 investigador/dia, exclusivo (não conta no time Extra), rotação própria
+// - Teixeira: ativa em fins de semana e feriados marcados - 1 delegado + 1 escrivão + 2 investigadores
+// - Intervalo mínimo de 72h (aproximado como 4 dias corridos) entre plantões do mesmo servidor
+// - Incompatibilidades nunca no mesmo dia (qualquer time)
+// - Pelo menos 1 investigador que dirige, 1 homem, 1 novato no time Extra de Patos
+
+function pairKey(a, b){ return [a, b].sort().join('_'); }
+
+function isOnFerias(servidorId, dataISO, feriasList){
+  return feriasList.some(f => f.servidor_id === servidorId && dataISO >= f.data_inicio && dataISO <= f.data_fim);
+}
+
+function diffDias(dataISOa, dataISOb){
+  const a = new Date(dataISOa + 'T00:00:00');
+  const b = new Date(dataISOb + 'T00:00:00');
+  return Math.round((a - b) / 86400000);
+}
+
+async function gerarEscala(mes, ano){
+  const avisos = [];
+  const { data: servidores } = await supa.from('servidores').select('*').eq('ativo', true);
+  const { data: incompats } = await supa.from('incompatibilidades').select('*');
+  const { data: ferias } = await supa.from('ferias').select('*');
+  const feriados = await garantirFeriadosDoMes(mes, ano);
+
+  const incompatSet = new Set((incompats || []).map(i => pairKey(i.servidor_id_1, i.servidor_id_2)));
+  const feriadosMap = {};
+  (feriados || []).forEach(f => { feriadosMap[f.data] = f; });
+
+  // Um "relógio" de descanso por categoria - um plantão em Patos não afeta
+  // o ciclo do Ordinário, e vice-versa. Cada setor conta só a própria história.
+  const lastShiftPorCategoria = { patos: {}, ordinario: {}, secust: {}, teixeira: {} };
+  const diasNoMes = new Date(ano, mes, 0).getDate();
+  const escala = [];
+
+  function disponivel(s, dataISO, poloField, categoria){
+    if (isOnFerias(s.id, dataISO, ferias || [])) return false;
+    if (poloField && !s[poloField]) return false;
+    const horas = configDescanso[categoria];
+    if (horas !== null && horas !== undefined && configEstrito[categoria]){
+      const minGap = (horas / 24) + 1; // ex: 72h = 3 dias de folga + o dia trabalhado = intervalo de 4 dias (ciclo 1/3)
+      const ultimo = lastShiftPorCategoria[categoria][s.id];
+      if (ultimo && diffDias(dataISO, ultimo) < minGap) return false;
+    }
+    return true;
+  }
+
+  function incompativel(s, assignedToday){
+    return assignedToday.some(o => incompatSet.has(pairKey(s.id, o.id)));
+  }
+
+  function escolher(candidatos, assignedToday, categoria, preferirAgrupamento, preferirDisposto){
+    const mapa = lastShiftPorCategoria[categoria] || {};
+    const horas = configDescanso[categoria];
+    const minGap = (horas !== null && horas !== undefined) ? (horas / 24) + 1 : null;
+    const ordenados = [...candidatos].sort((a, b) => {
+      if (preferirAgrupamento){
+        const scoreA = assignedToday.some(o => o.delegacia && o.delegacia === a.delegacia) ? 0 : 1;
+        const scoreB = assignedToday.some(o => o.delegacia && o.delegacia === b.delegacia) ? 0 : 1;
+        if (scoreA !== scoreB) return scoreA - scoreB;
+      }
+      if (preferirDisposto){
+        const jaTemQualificado = assignedToday.some(o => o.novato || o.disposto);
+        if (!jaTemQualificado){
+          const scoreA = a.disposto ? 0 : 1;
+          const scoreB = b.disposto ? 0 : 1;
+          if (scoreA !== scoreB) return scoreA - scoreB;
+        }
+      }
+      // Quando a regra não é estrita, ainda preferimos quem já completou o descanso
+      // configurado - só escala quem não completou se não sobrar mais ninguém.
+      if (!configEstrito[categoria] && minGap !== null){
+        const descansadoA = !mapa[a.id] || diffDias(dataAtualLoop, mapa[a.id]) >= minGap ? 0 : 1;
+        const descansadoB = !mapa[b.id] || diffDias(dataAtualLoop, mapa[b.id]) >= minGap ? 0 : 1;
+        if (descansadoA !== descansadoB) return descansadoA - descansadoB;
+      }
+      const la = mapa[a.id] || '0000-00-00';
+      const lb = mapa[b.id] || '0000-00-00';
+      return la < lb ? -1 : la > lb ? 1 : 0;
+    });
+    return ordenados.find(s => !incompativel(s, assignedToday)) || null;
+  }
+
+  let dataAtualLoop = null;
+
+  for (let dia = 1; dia <= diasNoMes; dia++){
+    const dataObj = new Date(ano, mes - 1, dia);
+    const dataISO = `${ano}-${String(mes).padStart(2,'0')}-${String(dia).padStart(2,'0')}`;
+    dataAtualLoop = dataISO;
+    const diaSemana = ['DOM','SEG','TER','QUA','QUI','SEX','SAB'][dataObj.getDay()];
+    const isWeekend = dataObj.getDay() === 0 || dataObj.getDay() === 6;
+    const feriadoHoje = feriadosMap[dataISO] || null;
+    const temTeixeira = isWeekend || (feriadoHoje && feriadoHoje.teixeira_plantao);
+    const poloPatos = isWeekend ? 'polo_patos_fds' : 'polo_patos_semana';
+
+    const assignedToday = [];
+    const dia_avisos = [];
+
+    // SECUST
+    const secustCand = servidores.filter(s => s.disponivel_secust && disponivel(s, dataISO, null, 'secust'));
+    const secust = escolher(secustCand, assignedToday, 'secust');
+    if (secust) { assignedToday.push(secust); lastShiftPorCategoria.secust[secust.id] = dataISO; }
+    else dia_avisos.push('SECUST sem servidor disponível');
+
+    // Ordinário (Patos) - hoje é raro/opcional (só quem tiver a flag marcada, ex: Dr. Clenaldo
+    // ocasionalmente), então não gera aviso quando ninguém está disponível nesse dia.
+    const ordinarioCand = servidores.filter(s => s.disponivel_ordinario && disponivel(s, dataISO, poloPatos, 'ordinario'));
+    const ordinario = escolher(ordinarioCand, assignedToday, 'ordinario');
+    if (ordinario) { assignedToday.push(ordinario); lastShiftPorCategoria.ordinario[ordinario.id] = dataISO; }
+
+    // Se quem está de Ordinário já é delegado (ex: Dr. Clenaldo), ele cobre o papel de
+    // Delegado Patos naquele dia - a vaga separada de Delegado fica vaga de propósito.
+    const ordinarioEhDelegado = ordinario && ordinario.cargo === 'delegado';
+
+    // Delegado Patos
+    let delegadoPatos = null;
+    if (!ordinarioEhDelegado){
+      const delegadoCand = servidores.filter(s => s.cargo === 'delegado' && disponivel(s, dataISO, poloPatos, 'patos'));
+      delegadoPatos = escolher(delegadoCand, assignedToday, 'patos');
+      if (delegadoPatos) { assignedToday.push(delegadoPatos); lastShiftPorCategoria.patos[delegadoPatos.id] = dataISO; }
+      else dia_avisos.push('Delegado (Patos) sem servidor disponível');
+    }
+
+    // Extra Patos - equipe combinada (escrivães + investigadores), com no máximo 2 mulheres no total
+    const totalEscrivoes = isWeekend ? 2 : 1;
+    const totalInvestigadores = isWeekend ? 2 : 3;
+    const investigadores = (ordinario && !ordinarioEhDelegado) ? [ordinario] : [];
+    const equipeExtra = [...investigadores]; // acumula todo mundo da equipe pra controlar o limite de mulheres
+    const escrivaes = [];
+
+    for (let i = 0; i < totalEscrivoes; i++){
+      const mulheresNaEquipe = equipeExtra.filter(s => s.sexo === 'F').length;
+      const cand = servidores.filter(s => s.cargo === 'escrivao' && !s.disponivel_secust && disponivel(s, dataISO, poloPatos, 'patos') && !assignedToday.includes(s) && !(s.sexo === 'F' && mulheresNaEquipe >= 2));
+      const escolhido = escolher(cand, assignedToday, 'patos', true);
+      if (escolhido){ escrivaes.push(escolhido); equipeExtra.push(escolhido); assignedToday.push(escolhido); lastShiftPorCategoria.patos[escolhido.id] = dataISO; }
+      else dia_avisos.push('Faltou escrivão (Extra Patos) - vaga ' + (i+1));
+    }
+
+    const vagasRestantes = totalInvestigadores - investigadores.length;
+    for (let i = 0; i < vagasRestantes; i++){
+      const mulheresNaEquipe = equipeExtra.filter(s => s.sexo === 'F').length;
+      const cand = servidores.filter(s => s.cargo === 'investigador' && !s.disponivel_secust && disponivel(s, dataISO, poloPatos, 'patos') && !assignedToday.includes(s) && !(s.sexo === 'F' && mulheresNaEquipe >= 2));
+      const escolhido = escolher(cand, assignedToday, 'patos', true, true);
+      if (escolhido){ investigadores.push(escolhido); equipeExtra.push(escolhido); assignedToday.push(escolhido); lastShiftPorCategoria.patos[escolhido.id] = dataISO; }
+      else dia_avisos.push('Faltou investigador (Extra Patos) - vaga ' + (i+1));
+    }
+
+    if (!investigadores.some(s => s.dirige)) dia_avisos.push('Nenhum investigador do dia sabe dirigir');
+    if (!investigadores.some(s => s.sexo === 'M')) dia_avisos.push('Nenhum investigador homem no dia');
+    if (!investigadores.some(s => s.novato || s.disposto)) dia_avisos.push('Nenhum investigador novato ou disposto no dia');
+
+    // Teixeira - por padrão sem limite de descanso configurado (ajustável na aba Regras),
+    // já que o pool de servidores desse polo costuma ser mais restrito
+    let teixeira = null;
+    if (temTeixeira){
+      const poloTeix = 'polo_teixeira_fds';
+      const delCand = servidores.filter(s => s.cargo === 'delegado' && disponivel(s, dataISO, poloTeix, 'teixeira') && !assignedToday.includes(s));
+      const delegadoTeixeira = escolher(delCand, assignedToday, 'teixeira');
+      if (delegadoTeixeira){ assignedToday.push(delegadoTeixeira); lastShiftPorCategoria.teixeira[delegadoTeixeira.id] = dataISO; }
+      else dia_avisos.push('Teixeira: delegado sem servidor disponível');
+
+      const equipeTeixeira = [];
+      const mulheresEscCand = 0;
+      const escCand = servidores.filter(s => s.cargo === 'escrivao' && !s.disponivel_secust && disponivel(s, dataISO, poloTeix, 'teixeira') && !assignedToday.includes(s) && !(s.sexo === 'F' && mulheresEscCand >= 2));
+      const escrivaoTeixeira = escolher(escCand, assignedToday, 'teixeira', true);
+      if (escrivaoTeixeira){ assignedToday.push(escrivaoTeixeira); equipeTeixeira.push(escrivaoTeixeira); lastShiftPorCategoria.teixeira[escrivaoTeixeira.id] = dataISO; }
+      else dia_avisos.push('Teixeira: escrivão sem servidor disponível');
+
+      const investTeixeira = [];
+      for (let i = 0; i < 2; i++){
+        const mulheresNaEquipe = equipeTeixeira.filter(s => s.sexo === 'F').length;
+        const cand = servidores.filter(s => s.cargo === 'investigador' && !s.disponivel_secust && disponivel(s, dataISO, poloTeix, 'teixeira') && !assignedToday.includes(s) && !(s.sexo === 'F' && mulheresNaEquipe >= 2));
+        const escolhido = escolher(cand, assignedToday, 'teixeira', true, true);
+        if (escolhido){ investTeixeira.push(escolhido); equipeTeixeira.push(escolhido); assignedToday.push(escolhido); lastShiftPorCategoria.teixeira[escolhido.id] = dataISO; }
+        else dia_avisos.push('Teixeira: faltou investigador - vaga ' + (i+1));
+      }
+      teixeira = { delegado: delegadoTeixeira, escrivao: escrivaoTeixeira, investigadores: investTeixeira };
+    }
+
+    escala.push({
+      data: dataISO, diaSemana, feriado: feriadoHoje ? feriadoHoje.nome : null,
+      delegadoPatos, ordinario, secust, escrivaes, investigadores, teixeira,
+      viaturaPatos: delegadoPatos ? (delegadoPatos.viatura_padrao || '') : '',
+      viaturaTeixeira: (teixeira && teixeira.delegado) ? (teixeira.delegado.viatura_padrao || '') : ''
+    });
+
+    if (dia_avisos.length > 0) avisos.push({ data: dataISO, itens: dia_avisos });
+  }
+
+  return { escala, avisos };
+}
+
+function opcoesServidor(cargo, selecionadoId){
+  const opcoes = servidoresCache.filter(s => s.cargo === cargo && s.ativo)
+    .map(s => `<option value="${s.id}" ${s.id === selecionadoId ? 'selected' : ''}>${escapeHtml(s.nome)}</option>`).join('');
+  return `<option value="">— vazio —</option>${opcoes}`;
+}
+
+function selectEditavel(dataISO, campo, idx, cargo, servidorAtual){
+  return `<select data-dia="${dataISO}" data-campo="${campo}" data-idx="${idx}" style="font-size:.78rem; padding:.25rem; margin:1px 0; width:100%;">
+    ${opcoesServidor(cargo, servidorAtual ? servidorAtual.id : '')}
+  </select>`;
+}
+
+function inputViatura(dataISO, campo, valorAtual){
+  return `<input type="text" data-dia="${dataISO}" data-campo="${campo}" value="${escapeHtml(valorAtual || '')}" placeholder="Viatura" style="font-size:.75rem; padding:.25rem; margin-top:3px; width:100%;">`;
+}
+
+function linhaEditavel(d){
+  const isWeekend = d.diaSemana === 'SAB' || d.diaSemana === 'DOM';
+  const totalEscrivoes = isWeekend ? 2 : 1;
+  const totalInvestigadores = isWeekend ? 2 : 3;
+  const escrivaes = [...(d.escrivaes || [])];
+  const investigadores = [...(d.investigadores || [])];
+  while (escrivaes.length < totalEscrivoes) escrivaes.push(null);
+  while (investigadores.length < totalInvestigadores) investigadores.push(null);
+
+  const temTeixeira = isWeekend || !!d.feriado;
+  const teixeiraInvest = d.teixeira ? [...(d.teixeira.investigadores || [])] : [];
+  while (temTeixeira && teixeiraInvest.length < 2) teixeiraInvest.push(null);
+
+  return `
+    <tr>
+      <td><strong>${d.data.split('-')[2]}</strong> ${d.diaSemana}${d.feriado ? ' <span class="tag on">' + escapeHtml(d.feriado) + '</span>' : ''}</td>
+      <td>
+        ${selectEditavel(d.data, 'delegadoPatos', 0, 'delegado', d.delegadoPatos)}
+        ${inputViatura(d.data, 'viaturaPatos', d.viaturaPatos)}
+      </td>
+      <td>${selectEditavel(d.data, 'ordinario', 0, 'investigador', d.ordinario)}</td>
+      <td>${selectEditavel(d.data, 'secust', 0, 'investigador', d.secust)}</td>
+      <td>${escrivaes.map((s, i) => selectEditavel(d.data, 'escrivaes', i, 'escrivao', s)).join('')}</td>
+      <td>${investigadores.map((s, i) => selectEditavel(d.data, 'investigadores', i, 'investigador', s)).join('')}</td>
+      <td>${temTeixeira ? `
+        ${selectEditavel(d.data, 'teixeiraDelegado', 0, 'delegado', d.teixeira ? d.teixeira.delegado : null)}
+        ${inputViatura(d.data, 'viaturaTeixeira', d.viaturaTeixeira)}
+        ${selectEditavel(d.data, 'teixeiraEscrivao', 0, 'escrivao', d.teixeira ? d.teixeira.escrivao : null)}
+        ${teixeiraInvest.map((s, i) => selectEditavel(d.data, 'teixeiraInvestigadores', i, 'investigador', s)).join('')}
+      ` : '-'}</td>
+    </tr>
+  `;
+}
+
+function lerEscalaEditadaDoDOM(escalaOriginal, containerId){
+  const container = document.getElementById(containerId);
+  return escalaOriginal.map(d => {
+    const porId = id => id ? (servidoresCache.find(s => s.id === id) || null) : null;
+    const getSel = (campo, idx) => {
+      const el = container.querySelector(`[data-dia="${d.data}"][data-campo="${campo}"][data-idx="${idx || 0}"]`);
+      return el ? porId(el.value) : null;
+    };
+    const getInput = campo => {
+      const el = container.querySelector(`input[data-dia="${d.data}"][data-campo="${campo}"]`);
+      return el ? el.value : '';
+    };
+    const isWeekend = d.diaSemana === 'SAB' || d.diaSemana === 'DOM';
+    const totalEscrivoes = isWeekend ? 2 : 1;
+    const totalInvestigadores = isWeekend ? 2 : 3;
+    const escrivaes = [];
+    for (let i = 0; i < totalEscrivoes; i++){ const s = getSel('escrivaes', i); if (s) escrivaes.push(s); }
+    const investigadores = [];
+    for (let i = 0; i < totalInvestigadores; i++){ const s = getSel('investigadores', i); if (s) investigadores.push(s); }
+
+    const temTeixeira = isWeekend || !!d.feriado;
+    let teixeira = null;
+    if (temTeixeira){
+      const tInvest = [];
+      for (let i = 0; i < 2; i++){ const s = getSel('teixeiraInvestigadores', i); if (s) tInvest.push(s); }
+      teixeira = { delegado: getSel('teixeiraDelegado', 0), escrivao: getSel('teixeiraEscrivao', 0), investigadores: tInvest };
+    }
+
+    return {
+      ...d,
+      delegadoPatos: getSel('delegadoPatos', 0),
+      ordinario: getSel('ordinario', 0),
+      secust: getSel('secust', 0),
+      escrivaes, investigadores, teixeira,
+      viaturaPatos: getInput('viaturaPatos'),
+      viaturaTeixeira: getInput('viaturaTeixeira')
+    };
+  });
+}
+
+function nomeOuTraco(s){ return s ? escapeHtml(s.nome) : '<span style="color:var(--danger);">— vazio —</span>'; }
+
+function linhaSomenteLeitura(d){
+  return `
+    <tr>
+      <td><strong>${d.data.split('-')[2]}</strong> ${d.diaSemana}${d.feriado ? ' <span class="tag on">' + escapeHtml(d.feriado) + '</span>' : ''}</td>
+      <td>${nomeOuTraco(d.delegadoPatos)}${d.viaturaPatos ? '<br><span class="tag">' + escapeHtml(d.viaturaPatos) + '</span>' : ''}</td>
+      <td>${nomeOuTraco(d.ordinario)}</td>
+      <td>${nomeOuTraco(d.secust)}</td>
+      <td>${(d.escrivaes || []).map(s => escapeHtml(s.nome)).join(', ') || '<span style="color:var(--danger);">—</span>'}</td>
+      <td>${(d.investigadores || []).map(s => escapeHtml(s.nome)).join(', ') || '<span style="color:var(--danger);">—</span>'}</td>
+      <td>${d.teixeira ? [d.teixeira.delegado, d.teixeira.escrivao, ...(d.teixeira.investigadores || [])].filter(Boolean).map(s => escapeHtml(s.nome)).join(', ') + (d.viaturaTeixeira ? '<br><span class="tag">' + escapeHtml(d.viaturaTeixeira) + '</span>' : '') : '-'}</td>
+    </tr>
+  `;
+}
+
+// ===================== RELATÓRIO DE HORAS TRABALHADAS =====================
+function horasTurno(isWeekend){ return isWeekend ? 24 : 14; }
+
+function calcularHoras(escala){
+  const horasPorId = {};
+  function add(s, horas){
+    if (!s) return;
+    if (!horasPorId[s.id]) horasPorId[s.id] = { nome: s.nome, cargo: s.cargo, horas: 0, plantoes: 0 };
+    horasPorId[s.id].horas += horas;
+    horasPorId[s.id].plantoes += 1;
+  }
+  escala.forEach(d => {
+    const isWeekend = d.diaSemana === 'SAB' || d.diaSemana === 'DOM';
+    const h = horasTurno(isWeekend);
+    add(d.delegadoPatos, h);
+    // Se o Ordinário for delegado (cobrindo os dois papéis, ex: Dr. Clenaldo), soma aqui.
+    // Se for investigador, ele já está dentro de d.investigadores - não soma de novo.
+    if (d.ordinario && d.ordinario.cargo === 'delegado') add(d.ordinario, h);
+    add(d.secust, 24);
+    (d.escrivaes || []).forEach(s => add(s, h));
+    (d.investigadores || []).forEach(s => add(s, h));
+    if (d.teixeira){
+      add(d.teixeira.delegado, 24);
+      add(d.teixeira.escrivao, 24);
+      (d.teixeira.investigadores || []).forEach(s => add(s, 24));
+    }
+  });
+  return Object.values(horasPorId).sort((a, b) => b.horas - a.horas);
+}
+
+function renderHoras(escala, containerId){
+  const lista = calcularHoras(escala);
+  const el = document.getElementById(containerId);
+  el.classList.remove('hidden');
+  el.innerHTML = `
+    <h3 style="margin-top:0; font-size:1rem;">Horas em plantão no mês</h3>
+    <table>
+      <thead><tr><th>Servidor</th><th>Cargo</th><th>Plantões</th><th>Horas no mês</th></tr></thead>
+      <tbody>${lista.map(x => `
+        <tr><td><strong>${escapeHtml(x.nome)}</strong></td><td>${labelCargo(x.cargo)}</td><td>${x.plantoes}</td><td>${x.horas}h</td></tr>
+      `).join('')}</tbody>
+    </table>
+    <p style="font-size:.72rem; color:var(--text-muted); margin-top:.6rem;">Dia de semana = 14h por plantão · Fim de semana = 24h · Ordinário/SECUST/Teixeira = 24h fixo.</p>
+  `;
+}
+
+function renderResultadoEscala(escala, avisos, mes, ano){
+  renderAvisosEm(document.getElementById('ge-avisos-panel'), avisos);
+
+  const painel = document.getElementById('ge-resultado-panel');
+  painel.innerHTML = `
+    <div style="display:flex; justify-content:flex-end; margin-bottom:.8rem;">
+      <button class="btn-ghost" id="btn-gerar-horas" style="width:auto;">Gerar Relatório de Horas</button>
+    </div>
+    <table>
+      <thead><tr>
+        <th>Dia</th><th>Delegado Patos</th><th>Ordinário</th><th>SECUST</th>
+        <th>Escrivães</th><th>Investigadores</th><th>Teixeira</th>
+      </tr></thead>
+      <tbody>${escala.map(linhaSomenteLeitura).join('')}</tbody>
+    </table>
+    <div id="ge-horas-panel" class="panel hidden" style="margin-top:1.2rem;"></div>
+  `;
+
+  document.getElementById('btn-gerar-horas').addEventListener('click', () => {
+    renderHoras(escala, 'ge-horas-panel');
+  });
+}
+
+document.getElementById('btn-gerar-escala').addEventListener('click', async () => {
+  const { mes, ano } = mesAnoSelecionados();
+  const btn = document.getElementById('btn-gerar-escala');
+  btn.textContent = 'Gerando...';
+  btn.disabled = true;
+  try {
+    const { escala, avisos } = await gerarEscala(mes, ano);
+    renderResultadoEscala(escala, avisos, mes, ano);
+    ultimoResultadoEscala = { escala, mes, ano };
+    document.getElementById('btn-exportar-pdf').classList.remove('hidden');
+    const { data: inserido, error: erroInsert } = await supa.from('escalas_geradas').insert({
+      mes, ano,
+      dados: escala,
+      avisos,
+      gerado_por: currentUser.id
+    }).select();
+
+    if (erroInsert){
+      mostrarToast('Escala gerada, mas não foi possível salvar no histórico: ' + erroInsert.message, true);
+    } else {
+      ultimoResultadoEscala.id = inserido[0].id;
+      mostrarToast('Escala gerada e salva no histórico.' + (avisos.length ? ' Há ' + avisos.length + ' dia(s) com aviso.' : ''), avisos.length > 0);
+    }
+  } catch(e){
+    mostrarToast('Erro ao gerar escala: ' + e.message, true);
+  } finally {
+    btn.textContent = 'Gerar Escala';
+    btn.disabled = false;
+  }
+});
+
+// ===================== ESCALAS GERADAS (histórico) =====================
+const MESES_NOME = ['','Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+
+async function carregarHistoricoEscalas(){
+  const { data, error } = await supa.from('escalas_geradas').select('*').order('created_at', { ascending: false });
+  const tbody = document.getElementById('eg-historico-tbody');
+  const emptyEl = document.getElementById('eg-historico-empty');
+  if (error){ mostrarToast('Erro ao carregar histórico: ' + error.message, true); return; }
+  if (!data || data.length === 0){
+    tbody.innerHTML = '';
+    emptyEl.classList.remove('hidden');
+    return;
+  }
+  emptyEl.classList.add('hidden');
+  tbody.innerHTML = data.map(e => `
+    <tr>
+      <td>${MESES_NOME[e.mes]}/${e.ano}</td>
+      <td>${new Date(e.created_at).toLocaleString('pt-BR')}</td>
+      <td><button class="btn-ghost btn-sm" data-ver-escala="${e.id}">Ver</button></td>
+    </tr>
+  `).join('');
+  tbody.querySelectorAll('[data-ver-escala]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const item = data.find(x => x.id === btn.dataset.verEscala);
+      ultimoItemHistorico = item;
+      const painel = document.getElementById('eg-detalhe-panel');
+      painel.classList.remove('hidden');
+      const avisosHtml = (item.avisos && item.avisos.length > 0)
+        ? '<div style="border:1px solid var(--danger); border-radius:8px; padding:.8rem; margin-bottom:1rem;"><strong style="color:var(--danger);">Avisos:</strong>' +
+          item.avisos.map(a => `<p style="font-size:.82rem; margin:.3rem 0;">${formatarData(a.data)}: ${a.itens.join(' · ')}</p>`).join('') + '</div>'
+        : '';
+      document.getElementById('eg-detalhe-conteudo').innerHTML = avisosHtml + `
+        <div style="display:flex; justify-content:flex-end; margin-bottom:.8rem;">
+          <button class="btn-ghost" id="btn-gerar-horas-historico" style="width:auto;">Gerar Relatório de Horas</button>
+        </div>
+        <table>
+          <thead><tr>
+            <th>Dia</th><th>Delegado Patos</th><th>Ordinário</th><th>SECUST</th>
+            <th>Escrivães</th><th>Investigadores</th><th>Teixeira</th>
+          </tr></thead>
+          <tbody>${item.dados.map(linhaSomenteLeitura).join('')}</tbody>
+        </table>
+        <div id="eg-horas-panel" class="panel hidden" style="margin-top:1.2rem;"></div>
+      `;
+      document.getElementById('btn-gerar-horas-historico').addEventListener('click', () => {
+        renderHoras(item.dados, 'eg-horas-panel');
+      });
+    });
+  });
+}
+
+// ===================== REVALIDAÇÃO APÓS EDIÇÃO MANUAL =====================
+async function revalidarEscala(escala){
+  const { data: ferias } = await supa.from('ferias').select('*');
+  const { data: incompats } = await supa.from('incompatibilidades').select('*');
+  const incompatSet = new Set((incompats || []).map(i => pairKey(i.servidor_id_1, i.servidor_id_2)));
+  const lastShift = {};
+  const avisos = [];
+
+  escala.forEach(d => {
+    const dia_avisos = [];
+    const isWeekend = d.diaSemana === 'SAB' || d.diaSemana === 'DOM';
+    const totalEscrivoes = isWeekend ? 2 : 1;
+    const totalInvestigadores = isWeekend ? 2 : 3;
+    const assignedToday = [];
+
+    function checar(s, label){
+      if (!s) return;
+      assignedToday.push(s);
+      if (isOnFerias(s.id, d.data, ferias || [])) dia_avisos.push(`${label}: ${s.nome} está de férias`);
+      if (lastShift[s.id] && diffDias(d.data, lastShift[s.id]) < (configDescanso.patos / 24) + 1) dia_avisos.push(`${label}: ${s.nome} sem ${configDescanso.patos}h de descanso desde o último plantão`);
+      lastShift[s.id] = d.data;
+    }
+
+    checar(d.delegadoPatos, 'Delegado Patos');
+    if (!d.delegadoPatos) dia_avisos.push('Delegado (Patos) sem servidor');
+    checar(d.ordinario, 'Ordinário');
+    checar(d.secust, 'SECUST');
+    if (!d.secust) dia_avisos.push('SECUST sem servidor');
+    (d.escrivaes || []).forEach(s => checar(s, 'Escrivão Extra'));
+    if ((d.escrivaes || []).length < totalEscrivoes) dia_avisos.push('Faltam escrivães no Extra Patos');
+    (d.investigadores || []).forEach(s => checar(s, 'Investigador Extra'));
+    if ((d.investigadores || []).length < totalInvestigadores) dia_avisos.push('Faltam investigadores no Extra Patos');
+    if (!(d.investigadores || []).some(s => s.dirige)) dia_avisos.push('Nenhum investigador do dia sabe dirigir');
+    if (!(d.investigadores || []).some(s => s.sexo === 'M')) dia_avisos.push('Nenhum investigador homem no dia');
+    if (!(d.investigadores || []).some(s => s.novato || s.disposto)) dia_avisos.push('Nenhum investigador novato ou disposto no dia');
+
+    const temTeixeira = isWeekend || !!d.feriado;
+    if (temTeixeira){
+      if (d.teixeira){
+        checar(d.teixeira.delegado, 'Teixeira Delegado');
+        if (!d.teixeira.delegado) dia_avisos.push('Teixeira: delegado sem servidor');
+        checar(d.teixeira.escrivao, 'Teixeira Escrivão');
+        if (!d.teixeira.escrivao) dia_avisos.push('Teixeira: escrivão sem servidor');
+        (d.teixeira.investigadores || []).forEach(s => checar(s, 'Teixeira Investigador'));
+        if ((d.teixeira.investigadores || []).length < 2) dia_avisos.push('Teixeira: faltam investigadores');
+      } else {
+        dia_avisos.push('Teixeira: nenhum servidor escalado nesse dia com plantão previsto');
+      }
+    }
+
+    for (let i = 0; i < assignedToday.length; i++){
+      for (let j = i + 1; j < assignedToday.length; j++){
+        if (incompatSet.has(pairKey(assignedToday[i].id, assignedToday[j].id))){
+          dia_avisos.push(`Incompatibilidade: ${assignedToday[i].nome} e ${assignedToday[j].nome} no mesmo dia`);
+        }
+      }
+    }
+
+    if (dia_avisos.length > 0) avisos.push({ data: d.data, itens: dia_avisos });
+  });
+
+  return avisos;
+}
+
+function renderAvisosEm(painelEl, avisos){
+  if (avisos.length > 0){
+    painelEl.classList.remove('hidden');
+    painelEl.innerHTML = '<h3 style="margin-top:0; color:var(--danger); font-size:1rem;">Avisos (' + avisos.length + ' dia(s) com pendência)</h3>' +
+      avisos.map(a => `<p style="font-size:.82rem; margin:.3rem 0;"><strong>${formatarData(a.data)}:</strong> ${a.itens.join(' · ')}</p>`).join('') +
+      '<p style="font-size:.75rem; color:var(--text-muted); margin-top:.6rem;">Você pode corrigir manualmente na tabela abaixo e clicar em "Salvar Alterações".</p>';
+  } else {
+    painelEl.classList.add('hidden');
+    painelEl.innerHTML = '';
+  }
+}
+
+// ===================== EXPORTAÇÃO PDF (estrutura fiel ao modelo original) =====================
+function exportarPDF(escala, mes, ano){
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(13);
+  doc.text(`ESCALAS – ${MESES_NOME[mes].toUpperCase()}/${ano}`, 40, 26);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  doc.text(`Publicada em ${new Date().toLocaleDateString('pt-BR')}`, 40, 38);
+
+  const amareloClaro = [252, 232, 150];
+
+  const head = [
+    [
+      { content: '', styles: { fillColor: [255,255,255] } },
+      { content: 'PATOS', colSpan: 4, styles: { halign: 'center', fillColor: amareloClaro } },
+      { content: 'TEIXEIRA (Extraord.)', colSpan: 2, styles: { halign: 'center', fillColor: amareloClaro } }
+    ],
+    [
+      '',
+      { content: 'EXTRA\nDELEGADOS', styles: { fillColor: amareloClaro, halign: 'center' } },
+      { content: 'Ordinário\n24/72', styles: { fillColor: amareloClaro, halign: 'center' } },
+      { content: 'EXTRA\nEPC\'s / IPC\'s', styles: { fillColor: amareloClaro, halign: 'center' } },
+      { content: 'SECUST', styles: { fillColor: [230,230,230], halign: 'center' } },
+      { content: 'DELEGADOS', styles: { fillColor: amareloClaro, halign: 'center' } },
+      { content: 'EPC\'s / IPC\'s', styles: { fillColor: amareloClaro, halign: 'center' } }
+    ]
+  ];
+
+  const body = escala.map(d => {
+    const delegadoPatosTexto = d.delegadoPatos
+      ? 'DPC ' + d.delegadoPatos.nome + (d.viaturaPatos ? '\n' + d.viaturaPatos : '')
+      : '—';
+
+    // A coluna EXTRA EPC's/IPC's não repete quem já aparece na coluna Ordinário
+    const extraSemOrdinario = [
+      ...(d.escrivaes || []),
+      ...(d.investigadores || []).filter(inv => !d.ordinario || inv.id !== d.ordinario.id)
+    ];
+
+    const teixeiraDelegadoTexto = (d.teixeira && d.teixeira.delegado)
+      ? 'DPC ' + d.teixeira.delegado.nome + (d.viaturaTeixeira ? '\n' + d.viaturaTeixeira : '')
+      : '';
+
+    const teixeiraEquipeTexto = d.teixeira
+      ? (d.teixeira.escrivao ? 'EPC ' + d.teixeira.escrivao.nome + '\n' : '') +
+        (d.teixeira.investigadores || []).map(s => s.nome).join(' e ')
+      : '';
+
+    return [
+      d.data.split('-')[2] + ' ' + d.diaSemana + (d.feriado ? ' *' : ''),
+      delegadoPatosTexto,
+      d.ordinario ? d.ordinario.nome : '',
+      extraSemOrdinario.map(s => s.nome).join(', '),
+      d.secust ? d.secust.nome : '',
+      teixeiraDelegadoTexto,
+      teixeiraEquipeTexto
+    ];
+  });
+
+  doc.autoTable({
+    head, body, startY: 46,
+    styles: { fontSize: 7, cellPadding: 3, lineColor: [0,0,0], lineWidth: 0.5, valign: 'middle' },
+    theme: 'grid',
+    columnStyles: { 0: { cellWidth: 55, fontStyle: 'bold' } },
+    didParseCell: function(data){
+      if (data.section === 'body' && data.column.index === 0){
+        const dow = escala[data.row.index].diaSemana;
+        if (dow === 'SAB' || dow === 'DOM'){
+          data.cell.styles.textColor = [200, 30, 30];
+          data.cell.styles.fontStyle = 'bold';
+        }
+      }
+    }
+  });
+
+  const feriadosDoMes = escala.filter(d => d.feriado);
+  if (feriadosDoMes.length > 0){
+    let y = doc.lastAutoTable.finalY + 15;
+    doc.setFontSize(7);
+    doc.text('* Feriados: ' + feriadosDoMes.map(d => d.data.split('-')[2] + ' - ' + d.feriado).join(' | '), 40, y);
+  }
+
+  doc.save(`Escala_${MESES_NOME[mes]}_${ano}.pdf`);
+}
+
+document.getElementById('btn-exportar-pdf').addEventListener('click', () => {
+  if (!ultimoResultadoEscala) return;
+  exportarPDF(ultimoResultadoEscala.escala, ultimoResultadoEscala.mes, ultimoResultadoEscala.ano);
+});
+
+document.getElementById('btn-exportar-pdf-historico').addEventListener('click', () => {
+  if (!ultimoItemHistorico) return;
+  exportarPDF(ultimoItemHistorico.dados, ultimoItemHistorico.mes, ultimoItemHistorico.ano);
+});
+
+// ===================== TOAST =====================
+function mostrarToast(msg, isError){
+  const el = document.createElement('div');
+  el.className = 'toast' + (isError ? ' error' : '');
+  el.textContent = msg;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 3500);
+}
+
+// ===================== INIT =====================
+checkSession();
 </script>
 </body>
 </html>
